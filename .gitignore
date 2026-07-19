@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Logs / local checks
+*.log
+dev-server.err
+dev-server.log
+start-check.txt
+start-check-bg.txt
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Test / coverage
+coverage/
+.vitest/
