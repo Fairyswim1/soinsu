@@ -8,7 +8,11 @@ export const scoringConfig = {
   longChainBonus: 450,
   objectiveBonus: 900,
   comboStep: 0.18,
-  moveBonus: 120,
+  /** 남은 이동 1회당 — 과도한 점수 폭주를 막기 위해 낮춤 */
+  moveBonus: 50,
+  /** 남은 시간 1초당 */
+  timeBonusPerSecond: 5,
   obstacleDamage: 75,
+  obstacleClear: 120,
   specialClear: 60,
 } as const;

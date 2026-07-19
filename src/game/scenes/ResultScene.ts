@@ -13,8 +13,9 @@ export class ResultScene extends BaseScene {
   create(data: { session: GameSession }): void {
     this.addBackground();
     const session = data.session;
-    const stars = ScoreSystem.stars(session.score, session.level.starThresholds);
-    if (session.mode === "campaign") {
+    const stars = session.cleared ? ScoreSystem.stars(session.score, session.level.starThresholds) : 0;
+
+    if (session.mode === "campaign" && session.cleared) {
       SaveManager.update((save) => ({
         ...save,
         tutorialComplete: save.tutorialComplete || session.level.id === 1,
@@ -36,9 +37,10 @@ export class ResultScene extends BaseScene {
     const completedEquations =
       session.completedFactorizations.length > 0
         ? session.completedFactorizations
-            .map((item) => FactorizationEngine.formatEquation(item.target, item.factors))
+            .map((item) => `${item.target} = ${item.canonical}`)
             .join(" / ")
         : FactorizationEngine.formatEquation(session.originalTarget, session.selectedFactors);
+    const breakdownLines = ScoreSystem.formatBreakdown(session.scoreBreakdown);
     const objectiveSummary = [
       session.level.objectives.maxDragsPerTarget
         ? `${session.level.objectives.maxDragsPerTarget}드래그 이내 완료: ${session.targetsCompletedWithinDragGoal}/${session.level.targets.length}`
@@ -51,26 +53,26 @@ export class ResultScene extends BaseScene {
       .filter(Boolean)
       .join(" | ");
 
-    this.addTitle("연구 결과", 78);
-    this.addPanel(640, 335, 900, 410);
+    this.addTitle(session.cleared ? "클리어!" : "실패…", 78);
+    this.addPanel(640, 335, 940, 430);
     const lines = [
+      session.cleared
+        ? `목표 ${session.level.targets.length}개 모두 소인수분해 완료`
+        : `목표 ${session.completedFactorizations.length}/${session.level.targets.length}개 완료 — 다시 도전해 보세요`,
       `총점: ${session.score}`,
-      `별: ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`,
-      `정확도: ${accuracy}%`,
-      `힌트 사용: ${session.hintsUsed}회`,
-      `남은 시간: ${Math.floor(session.timeLeftSeconds / 60)}:${String(session.timeLeftSeconds % 60).padStart(2, "0")}`,
-      `가장 긴 연결: ${session.longestChain}`,
-      `완성한 목표: ${session.completedFactorizations.length}개`,
+      `별: ${"★".repeat(stars)}${"☆".repeat(3 - stars)}${session.cleared ? "" : " (클리어 시에만 저장)"}`,
+      `정확도: ${accuracy}%  |  힌트: ${session.hintsUsed}회  |  최장 연결: ${session.longestChain}`,
+      `점수 내역: ${breakdownLines.join(" · ") || "-"}`,
       `미션: ${objectiveSummary}`,
-      `완성식: ${completedEquations}`,
+      `완성식(정규형): ${completedEquations}`,
     ];
     lines.forEach((line, index) => {
       this.add
-        .text(250, 180 + index * 40, line, {
+        .text(220, 168 + index * 42, line, {
           fontFamily: "Arial, sans-serif",
-          fontSize: index >= 6 ? "21px" : "26px",
-          color: index === 1 ? "#ffd761" : "#ffffff",
-          wordWrap: { width: 780 },
+          fontSize: index === 4 || index === 6 ? "18px" : "24px",
+          color: index === 0 ? (session.cleared ? "#8dfa72" : "#ff6c83") : index === 2 ? "#ffd761" : "#ffffff",
+          wordWrap: { width: 820 },
         })
         .setOrigin(0, 0.5);
     });

@@ -14,6 +14,8 @@ export const primeThemes: Record<Prime, PrimeTheme> = {
   5: { color: 0xffd761, dark: 0xb07300, highlight: 0xfff2c2, shape: "drop", label: "물방울" },
   7: { color: 0x8dfa72, dark: 0x2b8b35, highlight: 0xe4ffda, shape: "star", label: "별" },
   11: { color: 0xbda2ff, dark: 0x6042b8, highlight: 0xeee8ff, shape: "hex", label: "보석" },
+  13: { color: 0xff9a5c, dark: 0xb84d12, highlight: 0xffe0cc, shape: "roundRect", label: "호박" },
+  17: { color: 0x6ef0c8, dark: 0x1a8a6a, highlight: 0xd8fff3, shape: "hex", label: "수정" },
 };
 
 export const uiTheme = {

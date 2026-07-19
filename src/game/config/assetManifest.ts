@@ -10,6 +10,8 @@ export const assetManifest: AssetEntry[] = [
   { key: "prime-5", path: "assets/candies/prime-5.webp", type: "image" },
   { key: "prime-7", path: "assets/candies/prime-7.webp", type: "image" },
   { key: "prime-11", path: "assets/candies/prime-11.webp", type: "image" },
+  { key: "prime-13", path: "assets/candies/prime-13.webp", type: "image" },
+  { key: "prime-17", path: "assets/candies/prime-17.webp", type: "image" },
   { key: "bgm-game", path: "assets/audio/bgm-game.ogg", type: "audio" },
   { key: "candy-select", path: "assets/audio/candy-select.ogg", type: "audio" },
   { key: "candy-invalid", path: "assets/audio/candy-invalid.ogg", type: "audio" },

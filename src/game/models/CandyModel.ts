@@ -1,4 +1,4 @@
-export type Prime = 2 | 3 | 5 | 7 | 11;
+export type Prime = 2 | 3 | 5 | 7 | 11 | 13 | 17;
 export type SpecialCandy = "rocketH" | "rocketV" | "exponentBomb" | "rainbowPrime";
 
 export type Candy = {
@@ -12,7 +12,7 @@ export type Candy = {
 export type BoardCell = Candy | null;
 export type Board = BoardCell[][];
 
-export const supportedPrimes: Prime[] = [2, 3, 5, 7, 11];
+export const supportedPrimes: Prime[] = [2, 3, 5, 7, 11, 13, 17];
 
 export function isPrimeCandy(value: number): value is Prime {
   return supportedPrimes.includes(value as Prime);

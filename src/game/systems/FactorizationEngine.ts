@@ -107,6 +107,22 @@ export class FactorizationEngine {
     return `${target} = ${expression || "?"}`;
   }
 
+  /** 선택 순서와 무관한 정규형 문자열 */
+  static formatCanonical(target: number): string {
+    return this.formatCounts(this.factorize(target));
+  }
+
+  /** 플레이어 결과와 정규형이 같은지 확인하는 학습 피드백 */
+  static uniquenessFeedback(target: number, factors: readonly Prime[]): string {
+    const canonical = this.formatCanonical(target);
+    const player = this.normalizeFactors(factors);
+    const expected = this.factorize(target);
+    if (this.countsEqual(player, expected)) {
+      return `정규형 확인: ${target} = ${canonical} (순서가 달라도 같아요!)`;
+    }
+    return `${target} = ${this.formatFactors(factors)}`;
+  }
+
   static countsEqual(left: FactorCounts, right: FactorCounts): boolean {
     return supportedPrimes.every((prime) => (left[prime] ?? 0) === (right[prime] ?? 0));
   }

@@ -48,4 +48,11 @@ describe("FactorizationEngine", () => {
     expect(FactorizationEngine.factorize(7)).toEqual({ 7: 1 });
     expect(FactorizationEngine.applyFactors(7, [7])).toMatchObject({ ok: true, remainder: 1, completed: true });
   });
+
+  it("supports 13 and 17 and uniqueness feedback", () => {
+    expect(FactorizationEngine.formatCounts(FactorizationEngine.factorize(221))).toBe("13 × 17");
+    expect(FactorizationEngine.formatCounts(FactorizationEngine.factorize(195))).toBe("3 × 5 × 13");
+    expect(FactorizationEngine.uniquenessFeedback(180, [5, 2, 3, 3, 2])).toContain("정규형 확인");
+    expect(FactorizationEngine.uniquenessFeedback(180, [5, 2, 3, 3, 2])).toContain("2² × 3² × 5");
+  });
 });

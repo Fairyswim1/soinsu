@@ -272,6 +272,7 @@ export class GameScene extends BaseScene {
       this.audio.play("invalid");
       this.shakeCandy(candy.id);
       this.session.invalidSelections += 1;
+      this.breakCombo();
       this.feedbackText.setText(state.invalidMessage);
     }
     this.drawPath(state.candies);
@@ -314,15 +315,17 @@ export class GameScene extends BaseScene {
   private commitSelection(candies: Candy[], factors: Prime[]): void {
     const result = FactorizationEngine.applyFactors(this.session.currentRemainder, factors);
     if (!result.ok) {
+      this.breakCombo();
       this.feedbackText.setText(result.message);
       this.audio.play("invalid");
+      this.session.invalidSelections += 1;
       if (this.session.level.wrongDragPenalty) this.session.movesLeft -= 1;
       this.updateHud();
       return;
     }
     this.inputLocked = true;
     const score = ScoreSystem.scoreSelection(this.session, factors, result.completed);
-    this.session.score += score.gained;
+    this.applyScore(score);
     this.session.combo += 1;
     this.session.currentTargetDragCount += 1;
     for (const factor of factors) {
@@ -337,11 +340,19 @@ export class GameScene extends BaseScene {
     this.session.longestChain = Math.max(this.session.longestChain, factors.length);
     this.session.selectedFactors.push(...factors);
     this.session.currentRemainder = result.remainder;
-    this.feedbackText.setText(`${score.labels.join("  ")}  +${score.gained}`);
-    this.floatScore(candies, score.gained, factors.length);
+
+    let obstacleDamaged = 0;
+    let obstacleCleared = 0;
+    const blockerMessages: string[] = [];
     for (const candy of candies) {
-      BlockerSystem.hitAdjacent(this.blockers, candy.row, candy.col, candy.prime);
+      const hit = BlockerSystem.hitAdjacent(this.blockers, candy.row, candy.col, candy.prime);
+      obstacleDamaged += hit.damaged.length;
+      obstacleCleared += hit.cleared.length;
+      blockerMessages.push(...hit.messages);
     }
+    const obstacleScore = ScoreSystem.scoreObstacleHits(obstacleDamaged, obstacleCleared);
+    this.applyScore(obstacleScore);
+
     this.blockers = this.blockers.filter((blocker) => {
       if (blocker.type === "compositeIce") return blocker.current > 1;
       return !Object.entries(blocker.required).every(([key, count]) => {
@@ -349,10 +360,21 @@ export class GameScene extends BaseScene {
         return (blocker.used[prime] ?? 0) >= (count ?? 0);
       });
     });
+
     const specialAward = this.session.level.specialsEnabled ? SpecialCandySystem.evaluate(factors, result.completed) : {};
-    if (specialAward.label) this.feedbackText.setText(`${this.feedbackText.text}  ${specialAward.label}`);
     const extraCandies = this.getSpecialExtraCandies(candies);
-    const candiesToRemove = [...candies, ...extraCandies.filter((extra) => !candies.some((candy) => candy.id === extra.id))];
+    const uniqueExtras = extraCandies.filter((extra) => !candies.some((candy) => candy.id === extra.id));
+    const specialScore = ScoreSystem.scoreSpecialClears(uniqueExtras.length);
+    this.applyScore(specialScore);
+
+    const totalGained = score.gained + obstacleScore.gained + specialScore.gained;
+    const labels = [...score.labels, ...obstacleScore.labels, ...specialScore.labels];
+    if (specialAward.label) labels.push(specialAward.label);
+    if (blockerMessages[0]) labels.push(blockerMessages[0]);
+    this.feedbackText.setText(`${labels.join("  ")}  +${totalGained}`);
+    this.floatScore(candies, totalGained, factors.length);
+
+    const candiesToRemove = [...candies, ...uniqueExtras];
     this.popCandies(candiesToRemove, () => {
       this.generator.remove(this.board, candiesToRemove.map((candy) => candy.id));
       this.generator.refill(this.board, this.session.currentRemainder);
@@ -373,6 +395,17 @@ export class GameScene extends BaseScene {
         this.updateHud(result.steps);
       }
     });
+  }
+
+  private applyScore(result: ReturnType<typeof ScoreSystem.scoreSelection>): void {
+    this.session.score += result.gained;
+    ScoreSystem.mergeBreakdown(this.session.scoreBreakdown, result.parts);
+  }
+
+  private breakCombo(): void {
+    if (this.session.combo <= 0) return;
+    this.session.combo = 0;
+    this.updateHud();
   }
 
   private placeSpecialCandy(special: SpecialCandy): void {
@@ -413,10 +446,14 @@ export class GameScene extends BaseScene {
     if (dragGoal && this.session.currentTargetDragCount <= dragGoal) {
       this.session.targetsCompletedWithinDragGoal += 1;
     }
+    const factors = [...this.session.selectedFactors];
+    const canonical = FactorizationEngine.formatCanonical(this.session.originalTarget);
     this.session.completedFactorizations.push({
       target: this.session.originalTarget,
-      factors: [...this.session.selectedFactors],
+      factors,
+      canonical,
     });
+    this.feedbackText.setText(FactorizationEngine.uniquenessFeedback(this.session.originalTarget, factors));
     const nextTarget = this.session.level.targets[this.session.targetIndex + 1];
     if (!nextTarget) {
       this.finishGame();
@@ -504,7 +541,8 @@ export class GameScene extends BaseScene {
     this.timeText.setText(`남은 시간: ${this.formatTime(this.session.timeLeftSeconds)}`);
     this.timeText.setColor(this.session.timeLeftSeconds <= 15 ? "#ff6c83" : "#ffd761");
     this.scoreText.setText(`점수: ${this.session.score}`);
-    this.comboText.setText(`콤보: x${Math.max(1, this.session.combo)}`);
+    const comboDisplay = this.session.combo <= 0 ? "x1" : `x${(1 + this.session.combo * scoringConfig.comboStep).toFixed(2)}`;
+    this.comboText.setText(`콤보: ${comboDisplay}`);
     this.factorsText.setText(`선택한 소수: ${this.session.selectedFactors.join(" × ") || "-"}`);
     this.missionText.setText(this.formatMissionProgress());
     this.stepText.setText(`과정: ${(steps ?? [this.session.currentRemainder]).join(" → ")}`);
@@ -541,8 +579,11 @@ export class GameScene extends BaseScene {
 
   private finishGame(): void {
     this.session.endedAtMs = Date.now();
-    if (!this.session.objectiveBonusAwarded && this.areObjectivesComplete()) {
-      this.session.score += scoringConfig.objectiveBonus;
+    this.session.cleared =
+      this.session.completedFactorizations.length >= this.session.level.targets.length;
+    if (this.session.cleared && !this.session.objectiveBonusAwarded && this.areObjectivesComplete()) {
+      const objectiveScore = ScoreSystem.scoreObjectiveBonus();
+      this.applyScore(objectiveScore);
       this.session.objectiveBonusAwarded = true;
     }
     this.logDevSummary();

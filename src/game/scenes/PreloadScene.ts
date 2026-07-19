@@ -1,6 +1,6 @@
 import { assetManifest } from "../config/assetManifest";
 import { primeThemes } from "../config/theme";
-import type { Prime } from "../models/CandyModel";
+import { supportedPrimes } from "../models/CandyModel";
 import { BaseScene } from "./BaseScene";
 
 export class PreloadScene extends BaseScene {
@@ -24,8 +24,7 @@ export class PreloadScene extends BaseScene {
   }
 
   private createFallbackTextures(): void {
-    const primes: Prime[] = [2, 3, 5, 7, 11];
-    for (const prime of primes) {
+    for (const prime of supportedPrimes) {
       const key = `candy-${prime}`;
       if (this.textures.exists(key)) continue;
       const theme = primeThemes[prime];

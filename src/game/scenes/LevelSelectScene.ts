@@ -10,6 +10,13 @@ export class LevelSelectScene extends BaseScene {
   create(): void {
     this.addBackground();
     this.addTitle("스테이지 선택", 58);
+    this.add
+      .text(640, 100, "목표를 모두 소인수분해해야 다음 스테이지가 열려요.", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "18px",
+        color: "#bdefff",
+      })
+      .setOrigin(0.5);
     const save = SaveManager.load();
     const startX = 210;
     const startY = 150;

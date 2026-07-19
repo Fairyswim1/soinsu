@@ -11,6 +11,8 @@ describe("ScoreSystem and HintSystem", () => {
     const result = ScoreSystem.scoreSelection(session, [2, 2, 3], true);
     expect(result.gained).toBeGreaterThan(0);
     expect(result.labels).toContain("EXPONENT COMBO!");
+    expect(result.parts.exponent).toBe(300);
+    expect(result.parts.chain).toBeGreaterThan(0);
   });
 
   it("rewards longer chains more than single taps", () => {
@@ -19,6 +21,15 @@ describe("ScoreSystem and HintSystem", () => {
     const long = ScoreSystem.scoreSelection(session, [2, 3, 3, 5], false);
     expect(long.gained).toBeGreaterThan(single.gained * 4);
     expect(long.labels).toContain("PRIME CHAIN!");
+  });
+
+  it("scores obstacle and special clears", () => {
+    const obstacle = ScoreSystem.scoreObstacleHits(2, 1);
+    expect(obstacle.gained).toBe(2 * 75 + 120);
+    expect(obstacle.parts.obstacle).toBe(obstacle.gained);
+    const special = ScoreSystem.scoreSpecialClears(3);
+    expect(special.gained).toBe(180);
+    expect(special.labels[0]).toContain("소인수 미포함");
   });
 
   it("creates only valid prime hints", () => {
