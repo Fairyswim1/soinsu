@@ -1,8 +1,9 @@
+import { levels } from "../config/levels";
+import { PRIME_POP_SCREEN_ASSETS } from "../config/primePopAssets";
 import type { GameSession } from "../models/GameSession";
 import { FactorizationEngine } from "../systems/FactorizationEngine";
-import { levels } from "../config/levels";
-import { ScoreSystem } from "../systems/ScoreSystem";
 import { SaveManager } from "../systems/SaveManager";
+import { ScoreSystem } from "../systems/ScoreSystem";
 import { BaseScene } from "./BaseScene";
 
 export class ResultScene extends BaseScene {
@@ -14,69 +15,154 @@ export class ResultScene extends BaseScene {
     this.addBackground();
     const session = data.session;
     const stars = session.cleared ? ScoreSystem.stars(session.score, session.level.starThresholds) : 0;
+    this.saveResult(session, stars);
 
-    if (session.mode === "campaign" && session.cleared) {
-      SaveManager.update((save) => ({
-        ...save,
-        tutorialComplete: save.tutorialComplete || session.level.id === 1,
-        unlockedLevel: Math.max(save.unlockedLevel, Math.min(levels.length, session.level.id + 1)),
-        levelScores: {
-          ...save.levelScores,
-          [session.level.id]: Math.max(save.levelScores[String(session.level.id)] ?? 0, session.score),
-        },
-        levelStars: {
-          ...save.levelStars,
-          [session.level.id]: Math.max(save.levelStars[String(session.level.id)] ?? 0, stars),
-        },
-      }));
+    if (session.cleared) {
+      this.drawClearPopup(session, stars);
+    } else {
+      this.drawRetryPopup(session);
     }
+  }
 
-    const accuracy = Math.round(
-      (session.correctSelections / Math.max(1, session.correctSelections + session.invalidSelections)) * 100,
-    );
-    const completedEquations =
-      session.completedFactorizations.length > 0
-        ? session.completedFactorizations
-            .map((item) => `${item.target} = ${item.canonical}`)
-            .join(" / ")
-        : FactorizationEngine.formatEquation(session.originalTarget, session.selectedFactors);
-    const breakdownLines = ScoreSystem.formatBreakdown(session.scoreBreakdown);
-    const objectiveSummary = [
-      session.level.objectives.maxDragsPerTarget
-        ? `${session.level.objectives.maxDragsPerTarget}드래그 이내 완료: ${session.targetsCompletedWithinDragGoal}/${session.level.targets.length}`
-        : undefined,
-      session.level.objectives.minLongChains
-        ? `긴 연결: ${session.longChainsCompleted}/${session.level.objectives.minLongChains}`
-        : undefined,
-      session.objectiveBonusAwarded ? "미션 보너스 달성!" : "미션 보너스 미달성",
-    ]
-      .filter(Boolean)
-      .join(" | ");
+  private saveResult(session: GameSession, stars: number): void {
+    if (session.mode !== "campaign" || !session.cleared) return;
+    SaveManager.update((save) => ({
+      ...save,
+      tutorialComplete: save.tutorialComplete || session.level.id === 1,
+      unlockedLevel: Math.max(save.unlockedLevel, Math.min(levels.length, session.level.id + 1)),
+      levelScores: {
+        ...save.levelScores,
+        [session.level.id]: Math.max(save.levelScores[String(session.level.id)] ?? 0, session.score),
+      },
+      levelStars: {
+        ...save.levelStars,
+        [session.level.id]: Math.max(save.levelStars[String(session.level.id)] ?? 0, stars),
+      },
+    }));
+  }
 
-    this.addTitle(session.cleared ? "클리어!" : "실패…", 78);
-    this.addPanel(640, 335, 940, 430);
-    const lines = [
-      session.cleared
-        ? `목표 ${session.level.targets.length}개 모두 소인수분해 완료`
-        : `목표 ${session.completedFactorizations.length}/${session.level.targets.length}개 완료 — 다시 도전해 보세요`,
-      `총점: ${session.score}`,
-      `별: ${"★".repeat(stars)}${"☆".repeat(3 - stars)}${session.cleared ? "" : " (클리어 시에만 저장)"}`,
-      `정확도: ${accuracy}%  |  힌트: ${session.hintsUsed}회  |  최장 연결: ${session.longestChain}`,
-      `점수 내역: ${breakdownLines.join(" · ") || "-"}`,
-      `미션: ${objectiveSummary}`,
-      `완성식(정규형): ${completedEquations}`,
-    ];
-    lines.forEach((line, index) => {
-      this.add
-        .text(220, 168 + index * 42, line, {
-          fontFamily: "Arial, sans-serif",
-          fontSize: index === 4 || index === 6 ? "18px" : "24px",
-          color: index === 0 ? (session.cleared ? "#8dfa72" : "#ff6c83") : index === 2 ? "#ffd761" : "#ffffff",
-          wordWrap: { width: 820 },
-        })
-        .setOrigin(0, 0.5);
+  private drawClearPopup(session: GameSession, stars: number): void {
+    this.addPopupImage(PRIME_POP_SCREEN_ASSETS.stageClearPopup.key, 640, 360, 570, 570);
+    const equations = this.completedEquations(session);
+    this.add
+      .text(640, 285, "스테이지 클리어!", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "42px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#081236",
+        strokeThickness: 7,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 338, "분해 성공!", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "30px",
+        color: "#bff7ff",
+        fontStyle: "bold",
+        stroke: "#081236",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 405, `점수 ${session.score}   ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "26px",
+        color: "#ffd761",
+        fontStyle: "bold",
+        stroke: "#081236",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 456, equations, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "18px",
+        color: "#ffffff",
+        align: "center",
+        wordWrap: { width: 420 },
+      })
+      .setOrigin(0.5);
+    this.addHotspot(640, 560, 230, 76, () => this.goNext(session));
+  }
+
+  private drawRetryPopup(session: GameSession): void {
+    this.addPopupImage(PRIME_POP_SCREEN_ASSETS.retryPopup.key, 640, 360, 620, 414);
+    const target = session.currentRemainder > 1 ? session.currentRemainder : session.originalTarget;
+
+    const mask = this.add.graphics();
+    mask.fillStyle(0x142a75, 0.92);
+    mask.fillEllipse(640, 221, 118, 82);
+    mask.lineStyle(3, 0x7ff3ff, 0.65);
+    mask.strokeEllipse(640, 221, 118, 82);
+
+    this.add
+      .text(640, 221, String(target), {
+        fontFamily: "Arial, sans-serif",
+        fontSize: target >= 100 ? "42px" : "50px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#071236",
+        strokeThickness: 7,
+        shadow: { offsetX: 0, offsetY: 3, color: "#22d8ff", blur: 10, fill: true },
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 345, "다시 도전해 볼까요?", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "34px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#081236",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 395, `완성한 목표 ${session.completedFactorizations.length}/${session.level.targets.length}  점수 ${session.score}`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "22px",
+        color: "#bff7ff",
+        fontStyle: "bold",
+        stroke: "#081236",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+
+    this.addHotspot(540, 535, 210, 72, () => this.scene.start("GameScene", { mode: session.mode, level: session.level }));
+    this.addHotspot(746, 535, 238, 72, () => this.scene.start("LevelSelectScene"));
+  }
+
+  private addPopupImage(key: string, x: number, y: number, width: number, height: number): Phaser.GameObjects.Image {
+    const image = this.add.image(x, y, key);
+    const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
+    const scale = Math.min(width / source.width, height / source.height);
+    image.setScale(scale);
+    return image;
+  }
+
+  private addHotspot(x: number, y: number, width: number, height: number, onClick: () => void): Phaser.GameObjects.Rectangle {
+    const hotspot = this.add.rectangle(x, y, width, height, 0xffffff, 0.001);
+    hotspot.setInteractive({ useHandCursor: true });
+    hotspot.on("pointerdown", () => {
+      this.tweens.add({ targets: hotspot, scale: 0.96, duration: 70, yoyo: true });
+      onClick();
     });
-    this.addButton(510, 610, "다시 하기", () => this.scene.start("GameScene", { mode: session.mode, level: session.level }), 220);
-    this.addButton(770, 610, "메뉴", () => this.scene.start("MenuScene"), 220);
+    return hotspot;
+  }
+
+  private goNext(session: GameSession): void {
+    const nextLevel = levels.find((level) => level.id === session.level.id + 1);
+    if (session.mode === "campaign" && nextLevel) {
+      this.scene.start("GameScene", { mode: session.mode, levelId: nextLevel.id });
+      return;
+    }
+    this.scene.start("LevelSelectScene");
+  }
+
+  private completedEquations(session: GameSession): string {
+    if (session.completedFactorizations.length === 0) {
+      return FactorizationEngine.formatEquation(session.originalTarget, session.selectedFactors);
+    }
+    return session.completedFactorizations.map((item) => `${item.target} = ${item.canonical}`).join("\n");
   }
 }

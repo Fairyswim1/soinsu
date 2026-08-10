@@ -1,3 +1,13 @@
+import {
+  PRIME_POP_BOARD_ASSETS,
+  PRIME_POP_BUTTON_ASSETS,
+  PRIME_POP_EFFECT_ASSETS,
+  PRIME_POP_HUD_ASSETS,
+  PRIME_POP_SCREEN_ASSETS,
+  PRIME_TILE_ASSETS,
+  primeTileKey,
+} from "./primePopAssets";
+
 export type AssetEntry = {
   key: string;
   path: string;
@@ -5,15 +15,14 @@ export type AssetEntry = {
 };
 
 export const assetManifest: AssetEntry[] = [
-  { key: "prime-2", path: "assets/candies/prime-2.webp", type: "image" },
-  { key: "prime-3", path: "assets/candies/prime-3.webp", type: "image" },
-  { key: "prime-5", path: "assets/candies/prime-5.webp", type: "image" },
-  { key: "prime-7", path: "assets/candies/prime-7.webp", type: "image" },
-  { key: "prime-11", path: "assets/candies/prime-11.webp", type: "image" },
-  { key: "prime-13", path: "assets/candies/prime-13.webp", type: "image" },
-  { key: "prime-17", path: "assets/candies/prime-17.webp", type: "image" },
-  { key: "bgm-game", path: "assets/audio/bgm-game.ogg", type: "audio" },
-  { key: "candy-select", path: "assets/audio/candy-select.ogg", type: "audio" },
-  { key: "candy-invalid", path: "assets/audio/candy-invalid.ogg", type: "audio" },
-  { key: "perfect", path: "assets/audio/perfect.ogg", type: "audio" },
+  ...Object.entries(PRIME_TILE_ASSETS).map(([prime, path]) => ({
+    key: primeTileKey(Number(prime)),
+    path,
+    type: "image" as const,
+  })),
+  ...Object.values(PRIME_POP_BOARD_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
+  ...Object.values(PRIME_POP_BUTTON_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
+  ...Object.values(PRIME_POP_HUD_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
+  ...Object.values(PRIME_POP_EFFECT_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
+  ...Object.values(PRIME_POP_SCREEN_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
 ];

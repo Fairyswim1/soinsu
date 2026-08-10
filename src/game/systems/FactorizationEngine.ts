@@ -59,7 +59,7 @@ export class FactorizationEngine {
         ok: false,
         rejectedPrime: 0,
         remainder: currentRemainder,
-        message: "연결한 소수 사탕이 없어요.",
+        message: "연결한 소수 타일이 없어요.",
       };
     }
     let remainder = currentRemainder;

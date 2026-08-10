@@ -26,7 +26,7 @@ export class ScoreSystem {
   }
 
   static scoreSelection(session: GameSession, factors: readonly Prime[], completed: boolean): ScoreResult {
-    const labels: string[] = ["FACTOR POP!"];
+    const labels: string[] = factors.length === 1 && !completed ? ["짧은 연결"] : ["소수 연결"];
     const parts = this.emptyBreakdown();
     parts.chain =
       scoringConfig.chainScores[Math.min(factors.length, scoringConfig.chainScores.length - 1)] ??
@@ -35,43 +35,41 @@ export class ScoreSystem {
     const counts = FactorizationEngine.normalizeFactors(factors);
     if (Object.values(counts).some((count) => (count ?? 0) >= 2)) {
       parts.exponent = scoringConfig.exponentBonus;
-      labels.push("EXPONENT COMBO!");
+      labels.push("지수 보너스");
     }
     if (factors.length >= 4) {
       parts.longChain = scoringConfig.longChainBonus;
-      labels.push("PRIME CHAIN!");
+      labels.push("긴 연결 보너스");
     }
     if (completed) {
-      labels.push("소인수분해 완료!");
+      labels.push("분해 성공!");
       if (session.currentRemainder === session.originalTarget) {
         parts.perfect = scoringConfig.perfectFactor;
-        labels.push("PERFECT FACTORIZATION!");
+        labels.push("한 번에 완성!");
       }
       if (session.hintsUsed === 0) {
         parts.noHint = scoringConfig.noHint;
-        labels.push("NO HINT BONUS!");
+        labels.push("힌트 미사용");
       }
       parts.resources =
         session.movesLeft * scoringConfig.moveBonus + session.timeLeftSeconds * scoringConfig.timeBonusPerSecond;
     }
 
-    const preCombo =
+    const baseScore =
       parts.chain + parts.exponent + parts.longChain + parts.perfect + parts.noHint + parts.resources;
-    const comboMultiplier = 1 + session.combo * scoringConfig.comboStep;
-    const gained = Math.round(preCombo * comboMultiplier);
-    parts.comboBonus = gained - preCombo;
+    parts.comboBonus = session.combo > 0 ? session.combo * scoringConfig.streakBonus : 0;
     if (parts.comboBonus > 0) {
-      labels.push(`COMBO x${(comboMultiplier).toFixed(2)}`);
+      labels.push(`연속 성공 ${session.combo + 1}`);
     }
+    const gained = baseScore + parts.comboBonus;
     return { gained, labels, parts };
   }
 
   static scoreObstacleHits(damagedCount: number, clearedCount: number): ScoreResult {
     const parts = this.emptyBreakdown();
-    parts.obstacle =
-      damagedCount * scoringConfig.obstacleDamage + clearedCount * scoringConfig.obstacleClear;
-    const labels = parts.obstacle > 0 ? ["장애물 타격!"] : [];
-    if (clearedCount > 0) labels.push("합성수 분해 완료!");
+    parts.obstacle = damagedCount * scoringConfig.obstacleDamage + clearedCount * scoringConfig.obstacleClear;
+    const labels = parts.obstacle > 0 ? ["장애물 타격"] : [];
+    if (clearedCount > 0) labels.push("합성수 얼음 제거!");
     return { gained: parts.obstacle, labels, parts };
   }
 
@@ -80,7 +78,7 @@ export class ScoreSystem {
     parts.special = count * scoringConfig.specialClear;
     return {
       gained: parts.special,
-      labels: count > 0 ? ["특수 클리어 (소인수 미포함)"] : [],
+      labels: count > 0 ? ["특수 타일 정리(소인수 미포함)"] : [],
       parts,
     };
   }
@@ -88,7 +86,7 @@ export class ScoreSystem {
   static scoreObjectiveBonus(): ScoreResult {
     const parts = this.emptyBreakdown();
     parts.objective = scoringConfig.objectiveBonus;
-    return { gained: parts.objective, labels: ["미션 보너스!"], parts };
+    return { gained: parts.objective, labels: ["미션 보너스"], parts };
   }
 
   static mergeBreakdown(target: ScoreBreakdown, add: ScoreBreakdown): void {
@@ -106,16 +104,16 @@ export class ScoreSystem {
 
   static formatBreakdown(parts: ScoreBreakdown): string[] {
     const rows: Array<[string, number]> = [
-      ["체인", parts.chain],
+      ["연결", parts.chain],
       ["지수", parts.exponent],
       ["긴 연결", parts.longChain],
-      ["퍼펙트", parts.perfect],
-      ["노힌트", parts.noHint],
-      ["남은 이동·시간", parts.resources],
+      ["한 번 완성", parts.perfect],
+      ["힌트 미사용", parts.noHint],
+      ["남은 이동/시간", parts.resources],
       ["장애물", parts.obstacle],
-      ["특수 클리어", parts.special],
+      ["특수 타일", parts.special],
       ["미션", parts.objective],
-      ["콤보 가산", parts.comboBonus],
+      ["연속 성공", parts.comboBonus],
     ];
     return rows.filter(([, value]) => value !== 0).map(([label, value]) => `${label}: ${value}`);
   }

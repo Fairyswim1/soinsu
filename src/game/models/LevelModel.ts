@@ -8,6 +8,11 @@ export type LevelObjectives = {
   collectPrimes?: Partial<Record<Prime, number>>;
 };
 
+export type BoardTuning = {
+  validDensityLimit?: number;
+  adjacentValidSuppression?: number;
+};
+
 export type LevelConfig = {
   id: number;
   title: string;
@@ -20,5 +25,6 @@ export type LevelConfig = {
   hintPolicy: "auto" | "manual" | "off";
   wrongDragPenalty: boolean;
   specialsEnabled: boolean;
+  boardTuning?: BoardTuning;
   objectives: LevelObjectives;
 };

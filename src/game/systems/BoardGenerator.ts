@@ -9,6 +9,8 @@ export type BoardGeneratorOptions = {
   columns?: number;
   availablePrimes: Prime[];
   seed?: number;
+  validDensityLimit?: number;
+  adjacentValidSuppression?: number;
 };
 
 let candyCounter = 0;
@@ -18,6 +20,8 @@ export class BoardGenerator {
   private readonly columns: number;
   private readonly primes: Prime[];
   private readonly random: SeededRandom;
+  private readonly validDensityLimit: number;
+  private readonly adjacentValidSuppression: number;
   shuffleCount = 0;
 
   constructor(options: BoardGeneratorOptions) {
@@ -25,6 +29,8 @@ export class BoardGenerator {
     this.columns = options.columns ?? gameConfig.board.columns;
     this.primes = [...options.availablePrimes];
     this.random = new SeededRandom(options.seed);
+    this.validDensityLimit = options.validDensityLimit ?? 0.34;
+    this.adjacentValidSuppression = options.adjacentValidSuppression ?? 0.7;
   }
 
   createBoard(remainder: number): Board {
@@ -102,9 +108,12 @@ export class BoardGenerator {
     const validCount = board
       .flat()
       .filter((cell) => Boolean(cell && FactorizationEngine.canDivide(remainder, cell.prime))).length;
-    const validDensityTooHigh = validCount >= Math.ceil(this.rows * this.columns * 0.34);
+    const validDensityTooHigh = validCount >= Math.ceil(this.rows * this.columns * this.validDensityLimit);
     const adjacentValidCount = this.countAdjacentValid(board, row, col, remainder);
-    if (invalidPrimes.length > 0 && (validDensityTooHigh || (adjacentValidCount > 0 && this.random.next() < 0.7))) {
+    if (
+      invalidPrimes.length > 0 &&
+      (validDensityTooHigh || (adjacentValidCount > 0 && this.random.next() < this.adjacentValidSuppression))
+    ) {
       return this.random.pick(invalidPrimes);
     }
     return this.random.pick(this.primes);

@@ -1,15 +1,15 @@
 export const scoringConfig = {
-  baseCandy: 100,
-  chainStep: 40,
-  chainScores: [0, 100, 250, 500, 900, 1300, 1750],
-  perfectFactor: 650,
-  noHint: 350,
-  exponentBonus: 300,
-  longChainBonus: 450,
-  objectiveBonus: 900,
-  comboStep: 0.18,
-  /** 남은 이동 1회당 — 과도한 점수 폭주를 막기 위해 낮춤 */
-  moveBonus: 50,
+  baseCandy: 70,
+  chainStep: 70,
+  chainScores: [0, 70, 230, 560, 1080, 1700, 2450],
+  perfectFactor: 1200,
+  noHint: 450,
+  exponentBonus: 420,
+  longChainBonus: 850,
+  objectiveBonus: 1400,
+  streakBonus: 180,
+  /** 남은 이동 1회당 */
+  moveBonus: 85,
   /** 남은 시간 1초당 */
   timeBonusPerSecond: 5,
   obstacleDamage: 75,

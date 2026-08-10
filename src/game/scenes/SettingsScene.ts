@@ -1,4 +1,5 @@
 import { SaveManager } from "../systems/SaveManager";
+import { levels } from "../config/levels";
 import { BaseScene } from "./BaseScene";
 
 export class SettingsScene extends BaseScene {
@@ -36,8 +37,8 @@ export class SettingsScene extends BaseScene {
       SaveManager.reset();
       this.scene.restart();
     }, 230);
-    this.addButton(780, 480, "모든 레벨 해금", () => {
-      SaveManager.update((data) => ({ ...data, unlockedLevel: 15 }));
+    this.addButton(780, 480, "모든 스테이지 해금", () => {
+      SaveManager.update((data) => ({ ...data, unlockedLevel: levels.length }));
       this.scene.start("LevelSelectScene");
     }, 260);
     this.addButton(640, 590, "메뉴", () => this.scene.start("MenuScene"), 220);

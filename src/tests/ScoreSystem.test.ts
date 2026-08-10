@@ -10,8 +10,8 @@ describe("ScoreSystem and HintSystem", () => {
     const session = createSession("campaign", levels[0]!);
     const result = ScoreSystem.scoreSelection(session, [2, 2, 3], true);
     expect(result.gained).toBeGreaterThan(0);
-    expect(result.labels).toContain("EXPONENT COMBO!");
-    expect(result.parts.exponent).toBe(300);
+    expect(result.labels).toContain("지수 보너스");
+    expect(result.parts.exponent).toBe(420);
     expect(result.parts.chain).toBeGreaterThan(0);
   });
 
@@ -20,7 +20,7 @@ describe("ScoreSystem and HintSystem", () => {
     const single = ScoreSystem.scoreSelection(session, [2], false);
     const long = ScoreSystem.scoreSelection(session, [2, 3, 3, 5], false);
     expect(long.gained).toBeGreaterThan(single.gained * 4);
-    expect(long.labels).toContain("PRIME CHAIN!");
+    expect(long.labels).toContain("긴 연결 보너스");
   });
 
   it("scores obstacle and special clears", () => {

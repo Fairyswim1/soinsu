@@ -24,6 +24,7 @@ export class PreloadScene extends BaseScene {
   }
 
   private createFallbackTextures(): void {
+    const fallbackKeys: string[] = [];
     for (const prime of supportedPrimes) {
       const key = `candy-${prime}`;
       if (this.textures.exists(key)) continue;
@@ -59,7 +60,9 @@ export class PreloadScene extends BaseScene {
       g.fillCircle(36, 32, 10);
       g.generateTexture(key, 96, 96);
       g.destroy();
+      fallbackKeys.push(key);
     }
+    this.registry.set("fallbackCandyKeys", fallbackKeys);
   }
 
   private drawStar(
