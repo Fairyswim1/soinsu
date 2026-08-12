@@ -255,30 +255,25 @@ export class LevelSelectScene extends BaseScene {
     node: StageMapNode,
     bounds: MapBounds,
   ): void {
-    const hitSize = this.nodeSize(node) * 1.08;
-    const hitZone = this.add.zone(container.x, container.y, hitSize, hitSize).setDepth(40);
-    hitZone.setInteractive({ useHandCursor: true });
+    nodeImage.setInteractive({ useHandCursor: true });
 
-    hitZone.on("pointerover", () => {
+    nodeImage.on("pointerover", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 1.035, duration: 150, ease: "Sine.easeOut" });
       nodeImage.setTint(0xffffff);
       this.showStageInfo(node, bounds);
     });
 
-    hitZone.on("pointerout", () => {
+    nodeImage.on("pointerout", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 1, duration: 150, ease: "Sine.easeOut" });
       nodeImage.clearTint();
       this.hideStageInfo();
     });
 
-    hitZone.on("pointerdown", () => {
+    nodeImage.on("pointerdown", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
-    });
-
-    hitZone.on("pointerup", () => {
       this.scene.start("GameScene", { mode: "campaign", levelId: node.id });
     });
   }
@@ -386,12 +381,13 @@ export class LevelSelectScene extends BaseScene {
   private addBackToTitleButton(bounds: MapBounds): void {
     const x = bounds.left + 112;
     const y = bounds.top + bounds.height - 58;
-    const button = this.add.image(x, y, PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key).setDisplaySize(118, 58).setDepth(60);
-    const hitZone = this.add.zone(x, y, 142, 72).setDepth(80);
-    hitZone.setInteractive({ useHandCursor: true });
-    hitZone.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.03, duration: 150, ease: "Sine.easeOut" }));
-    hitZone.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 150, ease: "Sine.easeOut" }));
-    hitZone.on("pointerdown", () => this.tweens.add({ targets: button, scale: 0.96, duration: 70, ease: "Sine.easeOut" }));
-    hitZone.on("pointerup", () => this.scene.start("MenuScene"));
+    const button = this.add.image(x, y, PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key).setDisplaySize(118, 58).setDepth(80);
+    button.setInteractive({ useHandCursor: true });
+    button.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.03, duration: 150, ease: "Sine.easeOut" }));
+    button.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 150, ease: "Sine.easeOut" }));
+    button.on("pointerdown", () => {
+      this.tweens.add({ targets: button, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
+      this.scene.start("MenuScene");
+    });
   }
 }

@@ -4,7 +4,7 @@ import {
   PRIME_POP_BOARD_ASSETS,
   PRIME_POP_BUTTON_ASSETS,
   PRIME_POP_EFFECT_ASSETS,
-  PRIME_POP_HUD_ASSETS,
+  PRIME_POP_GAMEPLAY_ASSETS,
   PRIME_TILE_ASSETS,
   primeTileKey,
 } from "../config/primePopAssets";
@@ -30,13 +30,29 @@ type GameSceneData = {
   level?: LevelConfig;
 };
 
+
+const LEVEL_DISPLAY_TITLES: Record<number, string> = {
+  1: "\uCCAB \uC5F0\uACB0",
+  2: "5 \uB354\uD558\uAE30",
+  3: "\uAC19\uC740 \uC18C\uC218 \uBC18\uBCF5",
+  4: "\uAE34 \uC5F0\uACB0 \uBCF4\uB108\uC2A4",
+  5: "\uC911\uAC04 \uBCF4\uC0C1\uB300",
+  6: "\uBD88\uC548\uC815\uD55C \uC18C\uC218",
+  7: "7\uC758 \uAD00\uBB38",
+  8: "\uD569\uC131\uC218 \uC5BC\uC74C",
+  9: "\uC5EC\uB7EC \uBAA9\uD45C \uC5F0\uC18D",
+  10: "\uD2B9\uC218 \uBB38\uC7A5 \uC2DC\uD5D8",
+};
+
 const boardLayout = {
   centerX: 640,
-  centerY: 392,
-  frameWidth: 704,
+  centerY: 415,
+  frameWidth: 780,
   frameHeight: 470,
-  innerWidth: 552,
-  gap: 12,
+  trayWidth: 680,
+  trayHeight: 390,
+  trayPadding: 10,
+  gap: 8,
 };
 
 export class GameScene extends BaseScene {
@@ -49,7 +65,6 @@ export class GameScene extends BaseScene {
   private readonly candyObjects = new Map<string, Phaser.GameObjects.Container>();
   private boardLayer!: Phaser.GameObjects.Container;
   private pathLayer!: Phaser.GameObjects.Graphics;
-  private hudLayer!: Phaser.GameObjects.Container;
   private blockerLayer!: Phaser.GameObjects.Container;
   private cellSize = 60;
   private boardX = 0;
@@ -59,9 +74,7 @@ export class GameScene extends BaseScene {
   private isPaused = false;
   private lastPointerCellKey?: string;
   private timerEvent?: Phaser.Time.TimerEvent;
-  private stepText!: Phaser.GameObjects.Text;
   private equationText!: Phaser.GameObjects.Text;
-  private feedbackText!: Phaser.GameObjects.Text;
   private targetText!: Phaser.GameObjects.Text;
   private movesText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
@@ -71,6 +84,8 @@ export class GameScene extends BaseScene {
   private missionText!: Phaser.GameObjects.Text;
   private currentPointer?: { x: number; y: number };
   private displayedTarget?: number;
+  private feedbackBanner?: Phaser.GameObjects.Container;
+  private streakBadge?: Phaser.GameObjects.Container;
 
   constructor() {
     super("GameScene");
@@ -122,77 +137,109 @@ export class GameScene extends BaseScene {
   }
 
   private drawShell(): void {
-    this.add.rectangle(640, 360, 610, 708, 0x0d1438, 0.28).setStrokeStyle(2, 0x7ff3ff, 0.14);
+    const backdrop = this.add.graphics();
+    backdrop.fillStyle(0x02061c, 0.24);
+    backdrop.fillCircle(boardLayout.centerX, boardLayout.centerY + 12, 470);
+
+    this.add.image(640, 42, PRIME_POP_GAMEPLAY_ASSETS.stageHeaderPanel.key).setDisplaySize(360, 76).setAlpha(0.96);
     this.add
-      .text(640, 26, `스테이지 ${this.session.level.id}: ${this.session.level.title}`, {
+      .text(640, 28, `\uC2A4\uD14C\uC774\uC9C0 ${this.session.level.id}`, {
         fontFamily: "Arial, sans-serif",
-        fontSize: "24px",
+        fontSize: "16px",
+        color: "#bff7ff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 52, (LEVEL_DISPLAY_TITLES[this.session.level.id] ?? this.session.level.title), {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "23px",
         color: "#ffffff",
         fontStyle: "bold",
-        stroke: "#091138",
+        stroke: "#07123d",
         strokeThickness: 5,
       })
       .setOrigin(0.5);
-    this.addButton(136, 50, "홈", () => this.scene.start("MenuScene"), 118);
-    this.addImageButton(860, 50, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 118, 78);
-    this.addImageButton(1002, 50, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 118, 78);
-    this.addImageButton(1144, 50, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 118, 78);
-    this.add
-      .image(640, 88, PRIME_POP_BOARD_ASSETS.targetPanel.key)
-      .setDisplaySize(392, 118)
-      .setAlpha(0.98);
-    this.add
-      .image(boardLayout.centerX, boardLayout.centerY, PRIME_POP_BOARD_ASSETS.frame.key)
-      .setDisplaySize(boardLayout.frameWidth, boardLayout.frameHeight)
-      .setAlpha(0.98);
-    this.boardLayer = this.add.container(0, 0);
-    this.pathLayer = this.add.graphics();
-    this.blockerLayer = this.add.container(0, 0);
-    this.hudLayer = this.add.container(0, 0);
+
+    this.addImageButton(914, 43, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 86, 58);
+    this.addImageButton(1014, 43, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 86, 58);
+    this.addImageButton(1114, 43, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 86, 58);
+
+    this.add.image(640, 112, PRIME_POP_BOARD_ASSETS.targetPanel.key).setDisplaySize(408, 104).setAlpha(0.98);
     this.targetText = this.add
-      .text(640, 88, "", {
+      .text(640, 111, "", {
         fontFamily: "Arial, sans-serif",
-        fontSize: "58px",
+        fontSize: "64px",
         color: "#ffffff",
         fontStyle: "bold",
-        stroke: "#102052",
-        strokeThickness: 9,
+        stroke: "#07123d",
+        strokeThickness: 10,
+        shadow: { offsetX: 0, offsetY: 0, color: "#5be0ff", blur: 10, fill: true },
       })
       .setOrigin(0.5);
+
+    this.add.image(640, 184, PRIME_POP_GAMEPLAY_ASSETS.factorChainPanel.key).setDisplaySize(552, 74).setAlpha(0.98);
     this.equationText = this.add
-      .text(640, 153, "", {
+      .text(640, 184, "", {
         fontFamily: "Arial, sans-serif",
-        fontSize: "31px",
-        color: "#fff6a8",
+        fontSize: "30px",
+        color: "#eaffff",
         fontStyle: "bold",
-        stroke: "#14205a",
+        stroke: "#07123d",
         strokeThickness: 6,
       })
       .setOrigin(0.5);
-    this.movesText = this.addHudBlock(430, 644, PRIME_POP_HUD_ASSETS.movesCard.key, "이동", "#ffffff");
-    this.timeText = this.addHudBlock(640, 644, PRIME_POP_HUD_ASSETS.timeCard.key, "시간", "#ffd761");
-    this.scoreText = this.addHudBlock(850, 644, PRIME_POP_HUD_ASSETS.scoreCard.key, "점수", "#ffffff");
-    this.add.image(410, 686, PRIME_POP_HUD_ASSETS.smallChip.key).setDisplaySize(126, 42).setAlpha(0.96);
-    this.add.image(556, 686, PRIME_POP_HUD_ASSETS.smallChip.key).setDisplaySize(126, 42).setAlpha(0.96);
-    this.add.image(738, 686, PRIME_POP_HUD_ASSETS.longChip.key).setDisplaySize(220, 42).setAlpha(0.96);
-    this.add.image(1012, 686, PRIME_POP_HUD_ASSETS.missionChip.key).setDisplaySize(280, 46).setAlpha(0.88);
-    this.comboText = this.addText(358, 686, "", 14, "#bdefff", 112);
-    this.stepText = this.addText(506, 686, "", 14, "#ffffff", 118);
-    this.factorsText = this.addText(646, 686, "", 14, "#dfe8ff", 210);
-    this.missionText = this.addText(884, 686, "", 13, "#bdefff", 250);
-    this.feedbackText = this.addText(88, 686, "소수 타일을 드래그하세요.", 15, "#5be0ff", 230);
-    this.hudLayer.add([
-      this.targetText,
-      this.equationText,
-      this.movesText,
-      this.timeText,
-      this.scoreText,
-      this.comboText,
-      this.factorsText,
-      this.missionText,
-      this.stepText,
-      this.feedbackText,
-    ]);
+    this.factorsText = this.add
+      .text(640, 208, "", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "13px",
+        color: "#ffe88c",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setAlpha(0.86);
+
+    this.add
+      .image(boardLayout.centerX, boardLayout.centerY, PRIME_POP_BOARD_ASSETS.frame.key)
+      .setDisplaySize(boardLayout.frameWidth, boardLayout.frameHeight)
+      .setAlpha(0.99);
+    this.add
+      .image(boardLayout.centerX, boardLayout.centerY + 4, PRIME_POP_GAMEPLAY_ASSETS.boardInnerTray.key)
+      .setDisplaySize(boardLayout.trayWidth, boardLayout.trayHeight)
+      .setAlpha(0.98);
+
+    this.pathLayer = this.add.graphics();
+    this.boardLayer = this.add.container(0, 0);
+    this.blockerLayer = this.add.container(0, 0);
+
+    this.add.image(640, 650, PRIME_POP_GAMEPLAY_ASSETS.hudBar.key).setDisplaySize(612, 86).setAlpha(0.98);
+    this.movesText = this.addHudValue(448, 655, "\uC774\uB3D9", "#ffffff");
+    this.timeText = this.addHudValue(640, 655, "\uC2DC\uAC04", "#ffe88c");
+    this.scoreText = this.addHudValue(832, 655, "\uC810\uC218", "#ffffff");
+
+    this.add.image(1076, 648, PRIME_POP_GAMEPLAY_ASSETS.missionPanel.key).setDisplaySize(332, 112).setAlpha(0.96);
+    this.missionText = this.add
+      .text(946, 623, "", {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "14px",
+        color: "#e9fbff",
+        fontStyle: "bold",
+        lineSpacing: 5,
+        stroke: "#07123d",
+        strokeThickness: 3,
+        wordWrap: { width: 264 },
+      })
+      .setOrigin(0, 0);
+
+    this.comboText = this.add.text(0, 0, "").setVisible(false);
+
+    this.tweens.add({ targets: [this.targetText, this.equationText], alpha: { from: 0, to: 1 }, y: "+=0", duration: 220 });
+    this.boardLayer.setAlpha(0);
+    this.tweens.add({ targets: this.boardLayer, alpha: 1, y: "-=6", duration: 240, ease: "Sine.easeOut" });
   }
 
   private addImageButton(
@@ -202,110 +249,94 @@ export class GameScene extends BaseScene {
     onClick: () => void,
     width: number,
     height: number,
-  ): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-    const button = this.add.image(0, 0, key);
+  ): Phaser.GameObjects.Image {
+    const button = this.add.image(x, y, key);
     const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
     const fit = Math.min(width / source.width, height / source.height);
-    button.setScale(fit);
-    container.add(button);
-    container.setSize(width, height);
-    container.setInteractive({ useHandCursor: true });
-    container.on("pointerover", () => this.tweens.add({ targets: container, scale: 1.03, duration: 120, ease: "Sine.easeOut" }));
-    container.on("pointerout", () => this.tweens.add({ targets: container, scale: 1, duration: 120, ease: "Sine.easeOut" }));
-    container.on("pointerdown", () => this.tweens.add({ targets: container, scale: 0.96, duration: 80, ease: "Sine.easeOut" }));
-    container.on("pointerup", () => {
-      this.tweens.add({ targets: container, scale: 1.03, duration: 90, ease: "Sine.easeOut" });
+    button.setScale(fit).setInteractive({ useHandCursor: true });
+    button.on("pointerover", () => this.tweens.add({ targets: button, scale: fit * 1.03, duration: 120, ease: "Sine.easeOut" }));
+    button.on("pointerout", () => this.tweens.add({ targets: button, scale: fit, duration: 120, ease: "Sine.easeOut" }));
+    button.on("pointerdown", () => {
+      this.tweens.add({ targets: button, scale: fit * 0.96, duration: 80, yoyo: true, ease: "Sine.easeOut" });
       onClick();
     });
-    return container;
+    return button;
   }
 
-  private addHudBlock(x: number, y: number, key: string, label: string, color: string): Phaser.GameObjects.Text {
-    const card = this.add.image(x, y, key).setAlpha(0.97);
-    const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
-    card.setScale(Math.min(176 / source.width, 96 / source.height));
+  private addHudValue(x: number, y: number, label: string, color: string): Phaser.GameObjects.Text {
     this.add
-      .text(x, y - 12, label, {
+      .text(x, y - 18, label, {
         fontFamily: "Arial, sans-serif",
-        fontSize: "13px",
+        fontSize: "14px",
         color: "#aeefff",
         fontStyle: "bold",
-        stroke: "#081236",
+        stroke: "#07123d",
         strokeThickness: 3,
       })
       .setOrigin(0.5);
     return this.add
-      .text(x, y + 18, "", {
+      .text(x, y + 10, "", {
         fontFamily: "Arial, sans-serif",
-        fontSize: "24px",
+        fontSize: "29px",
         color,
         fontStyle: "bold",
-        stroke: "#081236",
-        strokeThickness: 5,
+        stroke: "#07123d",
+        strokeThickness: 6,
       })
       .setOrigin(0.5);
   }
 
-  private addText(x: number, y: number, text: string, size: number, color: string, width = 310): Phaser.GameObjects.Text {
-    return this.add
-      .text(x, y, text, {
-        fontFamily: "Arial, sans-serif",
-        fontSize: `${size}px`,
-        color,
-        stroke: "#081236",
-        strokeThickness: 3,
-        wordWrap: { width },
-      })
-      .setOrigin(0, 0.5);
+  private pulseText(text: Phaser.GameObjects.Text): void {
+    this.tweens.add({ targets: text, scale: 1.08, duration: 90, yoyo: true, ease: "Back.easeOut" });
   }
 
   private drawBoard(): void {
     this.boardLayer.removeAll(true);
     this.candyObjects.clear();
-    this.cellSize = Math.floor(
-      (boardLayout.innerWidth - boardLayout.gap * (gameConfig.board.columns - 1)) / gameConfig.board.columns,
-    );
-    const gridWidth = this.cellSize * gameConfig.board.columns + boardLayout.gap * (gameConfig.board.columns - 1);
-    const gridHeight = this.cellSize * gameConfig.board.rows + boardLayout.gap * (gameConfig.board.rows - 1);
+    const rows = gameConfig.board.rows;
+    const columns = gameConfig.board.columns;
+    const maxTileByWidth = Math.floor((boardLayout.trayWidth - boardLayout.trayPadding * 2) / (columns + (columns - 1) * 0.2));
+    const maxTileByHeight = Math.floor((boardLayout.trayHeight - boardLayout.trayPadding * 2) / (rows + (rows - 1) * 0.2));
+    this.cellSize = Math.min(64, maxTileByWidth, maxTileByHeight);
+    const gap = Math.max(8, Math.round(this.cellSize * 0.18));
+    boardLayout.gap = gap;
+    const gridWidth = this.cellSize * columns + gap * (columns - 1);
+    const gridHeight = this.cellSize * rows + gap * (rows - 1);
     this.boardX = Math.round(boardLayout.centerX - gridWidth / 2);
-    this.boardY = Math.round(boardLayout.centerY - gridHeight / 2 + 8);
+    this.boardY = Math.round(boardLayout.centerY + 4 - gridHeight / 2);
+
     for (const row of this.board) {
       for (const candy of row) {
         if (!candy) continue;
         const { x, y } = this.cellCenter(candy.row, candy.col);
         const container = this.add.container(x, y);
-        const cell = this.add
-          .image(0, 0, PRIME_POP_BOARD_ASSETS.cell.key)
-          .setDisplaySize(this.cellSize, this.cellSize)
-          .setAlpha(0.96);
         const tileKey = primeTileKey(candy.prime);
-        const tileSize = Math.round(this.cellSize * 0.82);
-        const image = this.add.image(0, 0, tileKey).setDisplaySize(tileSize, tileSize);
-        image.setName("tile");
+        const tileSize = Math.round(this.cellSize * 0.92);
         const highlight = this.add
           .image(0, 0, PRIME_POP_BOARD_ASSETS.selectionHighlight.key)
-          .setDisplaySize(Math.round(tileSize * 1.16), Math.round(tileSize * 1.16))
+          .setDisplaySize(Math.round(tileSize * 1.2), Math.round(tileSize * 1.2))
           .setVisible(false)
-          .setAlpha(0.86);
+          .setAlpha(0.82);
         highlight.setName("highlight");
         this.tweens.add({
           targets: highlight,
           alpha: 1,
-          scaleX: highlight.scaleX * 1.05,
-          scaleY: highlight.scaleY * 1.05,
+          scaleX: highlight.scaleX * 1.04,
+          scaleY: highlight.scaleY * 1.04,
           duration: 430,
           yoyo: true,
           repeat: -1,
         });
-        const children: Phaser.GameObjects.GameObject[] = [cell, image, highlight];
+        const image = this.add.image(0, 0, tileKey).setDisplaySize(tileSize, tileSize);
+        image.setName("tile");
+        const children: Phaser.GameObjects.GameObject[] = [highlight, image];
         const fallbackKeys = (this.registry.get("fallbackCandyKeys") as string[] | undefined) ?? [];
         if (!PRIME_TILE_ASSETS[candy.prime] || fallbackKeys.includes(tileKey)) {
           children.push(
             this.add
               .text(0, 1, String(candy.prime), {
                 fontFamily: "Arial, sans-serif",
-                fontSize: `${Math.floor(this.cellSize * 0.38)}px`,
+                fontSize: `${Math.floor(this.cellSize * 0.42)}px`,
                 color: "#ffffff",
                 fontStyle: "bold",
                 stroke: "#162044",
@@ -316,9 +347,9 @@ export class GameScene extends BaseScene {
         }
         const special = candy.special
           ? this.add
-              .text(0, -this.cellSize * 0.34, candy.special === "exponentBomb" ? "지수" : "로켓", {
+              .text(0, -this.cellSize * 0.34, candy.special === "exponentBomb" ? "\uC9C0\uC218" : "\uB85C\uCF13", {
                 fontFamily: "Arial, sans-serif",
-                fontSize: "16px",
+                fontSize: "15px",
                 color: "#fff6a8",
                 stroke: "#162044",
                 strokeThickness: 3,
@@ -329,6 +360,15 @@ export class GameScene extends BaseScene {
         if (special) container.add(special);
         container.setSize(this.cellSize, this.cellSize);
         container.setInteractive({ useHandCursor: true });
+        container.on("pointerover", () => {
+          if (!this.inputLocked) this.tweens.add({ targets: container, scale: 1.04, duration: 110, ease: "Sine.easeOut" });
+        });
+        container.on("pointerout", () => {
+          if (!this.inputLocked) this.tweens.add({ targets: container, scale: 1, duration: 110, ease: "Sine.easeOut" });
+        });
+        container.on("pointerdown", () => {
+          if (!this.inputLocked) this.tweens.add({ targets: container, scale: 0.96, duration: 70, yoyo: true, ease: "Sine.easeOut" });
+        });
         this.boardLayer.add(container);
         this.candyObjects.set(candy.id, container);
       }
@@ -342,7 +382,6 @@ export class GameScene extends BaseScene {
     this.input.on("pointerup", this.endDrag, this);
     this.input.on("pointerupoutside", this.endDrag, this);
   }
-
   private drawBlockers(): void {
     this.blockerLayer.removeAll(true);
     for (const blocker of this.blockers) {
@@ -395,7 +434,7 @@ export class GameScene extends BaseScene {
   private timeUp(): void {
     this.inputLocked = true;
     this.isDragging = false;
-    this.feedbackText.setText("시간 종료! 결과를 확인해요.");
+    this.showRetryFeedback("\uC2DC\uAC04 \uC885\uB8CC!");
     this.audio.play("fail");
     this.time.delayedCall(450, () => this.finishGame());
   }
@@ -423,7 +462,7 @@ export class GameScene extends BaseScene {
       this.shakeCandy(candy.id);
       this.session.invalidSelections += 1;
       this.breakCombo();
-      this.feedbackText.setText(state.invalidMessage);
+      this.showRetryFeedback(state.invalidMessage || "\uB2E4\uC2DC \uC120\uD0DD!");
     }
     this.drawPath(state.candies);
     this.previewSelection(state);
@@ -472,7 +511,7 @@ export class GameScene extends BaseScene {
     const result = FactorizationEngine.applyFactors(this.session.currentRemainder, factors);
     if (!result.ok) {
       this.breakCombo();
-      this.feedbackText.setText(result.message);
+      this.showRetryFeedback(result.message || "\uB2E4\uC2DC \uC120\uD0DD!");
       this.audio.play("invalid");
       this.session.invalidSelections += 1;
       if (this.session.level.wrongDragPenalty) this.session.movesLeft -= 1;
@@ -527,7 +566,7 @@ export class GameScene extends BaseScene {
     const labels = [...score.labels, ...obstacleScore.labels, ...specialScore.labels];
     if (specialAward.label) labels.push(specialAward.label);
     if (blockerMessages[0]) labels.push(blockerMessages[0]);
-    this.feedbackText.setText(`${labels.join("  ")}  +${totalGained}`);
+    this.factorsText.setText(`${labels.join("  ")}  +${totalGained}`);
     this.floatScore(candies, totalGained, factors.length);
 
     const candiesToRemove = [...candies, ...uniqueExtras];
@@ -609,16 +648,17 @@ export class GameScene extends BaseScene {
       factors,
       canonical,
     });
-    this.equationText.setText(`${factors.join(" × ")} = ${this.session.originalTarget}`);
-    this.showNumberBreakMessage();
-    this.feedbackText.setText(FactorizationEngine.uniquenessFeedback(this.session.originalTarget, factors));
+    this.equationText.setText(`${factors.join(" \u00D7 ")} = ${this.session.originalTarget}`);
+    this.popFactorChain();
+    this.showSuccessFeedback("\uBD84\uD574 \uC131\uACF5!");
     this.playSuccessEffect();
+    this.showStreakBadge();
     const nextTarget = this.session.level.targets[this.session.targetIndex + 1];
     if (!nextTarget) {
-      this.time.delayedCall(650, () => this.finishGame());
+      this.time.delayedCall(820, () => this.finishGame());
       return;
     }
-    this.time.delayedCall(620, () => {
+    this.time.delayedCall(760, () => {
       this.session.targetIndex += 1;
       this.session.originalTarget = nextTarget;
       this.session.currentRemainder = nextTarget;
@@ -626,7 +666,6 @@ export class GameScene extends BaseScene {
       this.session.currentTargetDragCount = 0;
       this.generator.ensureValidMove(this.board, nextTarget);
       this.inputLocked = false;
-      this.feedbackText.setText("다음 목표 수가 준비됐어요.");
       this.updateHud();
     });
   }
@@ -724,52 +763,102 @@ export class GameScene extends BaseScene {
 
   private previewSelection(state: { factors: Prime[]; previewRemainder: number }): void {
     const all = [...this.session.selectedFactors, ...state.factors];
-    this.factorsText.setText(`선택 ${all.join("×") || "-"}`);
-    this.equationText.setText(all.length > 0 ? all.join(" × ") : "소수 타일을 연결하세요");
-    this.stepText.setText(`남은 수 ${state.previewRemainder}`);
+    const expression = all.length > 0 ? all.join(" \u00D7 ") : "\uC120\uD0DD \uB300\uAE30";
+    this.equationText.setText(expression);
+    this.factorsText.setText(
+      all.length > 0
+        ? `\uD604\uC7AC \uACF1: ${this.session.originalTarget / Math.max(1, state.previewRemainder)}  \u00B7  \uB0A8\uC740 \uAC12: ${state.previewRemainder}`
+        : "",
+    );
+    if (state.factors.length > 0) this.popFactorChain();
   }
 
   private updateHud(steps?: readonly number[]): void {
+    const previousMoves = this.movesText.text;
+    const previousTime = this.timeText.text;
+    const previousScore = this.scoreText.text;
+
     this.targetText.setText(String(this.session.originalTarget));
     if (this.displayedTarget !== this.session.originalTarget) {
       this.displayedTarget = this.session.originalTarget;
-      this.tweens.add({ targets: this.targetText, scale: 1.12, duration: 110, yoyo: true, ease: "Back.easeOut" });
+      this.targetText.setScale(0.92);
+      this.tweens.add({ targets: this.targetText, scale: 1.05, duration: 160, yoyo: true, ease: "Back.easeOut" });
     }
     this.movesText.setText(String(this.session.movesLeft));
     this.timeText.setText(this.formatTime(this.session.timeLeftSeconds));
-    this.timeText.setColor(this.session.timeLeftSeconds <= 15 ? "#ff6c83" : "#ffd761");
+    this.timeText.setColor(this.session.timeLeftSeconds <= 15 ? "#ff6c83" : "#ffe88c");
     this.scoreText.setText(String(this.session.score));
-    this.comboText.setText(`연속 ${this.session.combo}`);
-    this.factorsText.setText(`선택 ${this.session.selectedFactors.join("×") || "-"}`);
+    if (previousMoves && previousMoves !== this.movesText.text) this.pulseText(this.movesText);
+    if (previousTime && previousTime !== this.timeText.text) this.pulseText(this.timeText);
+    if (previousScore && previousScore !== this.scoreText.text) this.pulseText(this.scoreText);
+
+    this.comboText.setText(`\uC5F0\uC18D ${this.session.combo}`);
     this.missionText.setText(this.formatMissionProgress());
-    this.stepText.setText(`남은 수 ${(steps ?? [this.session.currentRemainder]).at(-1) ?? this.session.currentRemainder}`);
-    this.equationText.setText(
-      this.session.selectedFactors.length > 0 ? this.session.selectedFactors.join(" × ") : "소수 타일을 연결하세요",
-    );
+    const selected = this.session.selectedFactors;
+    const remainder = (steps ?? [this.session.currentRemainder]).at(-1) ?? this.session.currentRemainder;
+    this.factorsText.setText(selected.length > 0 ? `\uB0A8\uC740 \uAC12: ${remainder}` : "");
+    this.equationText.setText(selected.length > 0 ? selected.join(" \u00D7 ") : "\uC120\uD0DD \uB300\uAE30");
   }
 
-  private showNumberBreakMessage(): void {
+  private showResultFeedback(key: string, message: string, retry = false): void {
+    this.feedbackBanner?.destroy();
+    const container = this.add.container(boardLayout.centerX, boardLayout.centerY - 12).setDepth(90).setAlpha(0).setScale(0.76);
+    const banner = this.add.image(0, 0, key).setDisplaySize(390, 150).setAlpha(0.98);
     const text = this.add
-      .text(boardLayout.centerX, boardLayout.centerY - 18, "NUMBER BREAK!", {
+      .text(0, 2, message, {
         fontFamily: "Arial, sans-serif",
-        fontSize: "48px",
+        fontSize: "34px",
         color: "#ffffff",
         fontStyle: "bold",
-        stroke: "#102052",
-        strokeThickness: 9,
+        stroke: "#07123d",
+        strokeThickness: 7,
       })
-      .setOrigin(0.5)
-      .setScale(0.74)
-      .setAlpha(0);
-    this.tweens.add({
-      targets: text,
-      scale: 1.08,
-      alpha: 1,
-      duration: 130,
-      ease: "Back.easeOut",
-      yoyo: true,
-      hold: 390,
-      onComplete: () => text.destroy(),
+      .setOrigin(0.5);
+    container.add([banner, text]);
+    this.feedbackBanner = container;
+    this.tweens.add({ targets: container, alpha: 1, scale: 1, duration: 190, ease: "Back.easeOut" });
+    if (retry) {
+      this.tweens.add({ targets: container, x: boardLayout.centerX + 5, duration: 55, yoyo: true, repeat: 3, ease: "Sine.easeInOut" });
+    }
+    this.time.delayedCall(retry ? 620 : 860, () => {
+      this.tweens.add({ targets: container, alpha: 0, scale: 0.94, duration: 180, ease: "Sine.easeIn", onComplete: () => container.destroy() });
+    });
+  }
+
+  private showSuccessFeedback(message: string): void {
+    this.showResultFeedback(PRIME_POP_GAMEPLAY_ASSETS.feedbackSuccess.key, message, false);
+  }
+
+  private showRetryFeedback(message = "\uB2E4\uC2DC \uC120\uD0DD!"): void {
+    this.showResultFeedback(PRIME_POP_GAMEPLAY_ASSETS.feedbackRetry.key, message, true);
+  }
+
+  private popFactorChain(): void {
+    this.tweens.killTweensOf(this.equationText);
+    this.equationText.setScale(0.86);
+    this.tweens.add({ targets: this.equationText, scale: 1, duration: 150, ease: "Back.easeOut" });
+  }
+
+  private showStreakBadge(): void {
+    if (this.session.combo < 2) return;
+    this.streakBadge?.destroy();
+    const container = this.add.container(902, 214).setDepth(88).setAlpha(0).setScale(0.7);
+    const badge = this.add.image(0, 0, PRIME_POP_GAMEPLAY_ASSETS.streakBadge.key).setDisplaySize(190, 86).setAlpha(0.98);
+    const text = this.add
+      .text(0, 0, `\uC5F0\uC18D \uC131\uACF5 ${this.session.combo}\uD68C!`, {
+        fontFamily: "Arial, sans-serif",
+        fontSize: "22px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+    container.add([badge, text]);
+    this.streakBadge = container;
+    this.tweens.add({ targets: container, alpha: 1, scale: 1.0, duration: 250, ease: "Back.easeOut" });
+    this.time.delayedCall(1050, () => {
+      this.tweens.add({ targets: container, alpha: 0, duration: 200, ease: "Sine.easeIn", onComplete: () => container.destroy() });
     });
   }
 
@@ -781,26 +870,25 @@ export class GameScene extends BaseScene {
 
   private formatMissionProgress(): string {
     const objectives = this.session.level.objectives;
-    const parts: string[] = [];
+    const lines: string[] = [];
     if (objectives.maxDragsPerTarget) {
-      parts.push(
-        `${objectives.maxDragsPerTarget}드래그 이내: ${this.session.targetsCompletedWithinDragGoal}/${this.session.level.targets.length}`,
-      );
+      const done = this.session.targetsCompletedWithinDragGoal;
+      const total = this.session.level.targets.length;
+      lines.push(`${done >= total ? "\u2713" : "\u2022"} ${objectives.maxDragsPerTarget}\uB4DC\uB798\uADF8 \uC774\uB0B4 ${done}/${total}`);
     }
     if (objectives.minLongChains) {
-      parts.push(
-        `${objectives.longChainLength ?? 4}+ 연결: ${this.session.longChainsCompleted}/${objectives.minLongChains}`,
-      );
+      const done = this.session.longChainsCompleted;
+      const total = objectives.minLongChains;
+      lines.push(`${done >= total ? "\u2713" : "\u2022"} ${objectives.longChainLength ?? 4}+ \uC5F0\uACB0 ${done}/${total}`);
     }
     if (objectives.collectPrimes) {
-      const collect = Object.entries(objectives.collectPrimes)
-        .map(([prime, required]) => `${prime}:${this.session.collectedPrimes[Number(prime) as Prime] ?? 0}/${required}`)
-        .join("  ");
-      parts.push(`수집 ${collect}`);
+      for (const [prime, required] of Object.entries(objectives.collectPrimes).slice(0, Math.max(1, 3 - lines.length))) {
+        const done = this.session.collectedPrimes[Number(prime) as Prime] ?? 0;
+        lines.push(`${done >= (required ?? 0) ? "\u2713" : "\u2022"} ${prime} \uC218\uC9D1 ${done}/${required}`);
+      }
     }
-    return `미션: ${parts.join(" | ")}`;
+    return lines.length > 0 ? lines.slice(0, 3).join("\n") : "\u2022 \uBAA9\uD45C \uC22B\uC790\uB97C \uBD84\uD574";
   }
-
   private finishGame(): void {
     this.session.endedAtMs = Date.now();
     const targetsComplete = this.session.completedFactorizations.length >= this.session.level.targets.length;
@@ -868,15 +956,15 @@ export class GameScene extends BaseScene {
     const centerY = boardLayout.centerY + 8;
     const shockwave = this.add
       .image(centerX, centerY, PRIME_POP_EFFECT_ASSETS.shockwave.key)
-      .setDisplaySize(boardLayout.innerWidth * 0.84, boardLayout.innerWidth * 0.4)
+      .setDisplaySize(boardLayout.trayWidth * 0.84, boardLayout.trayWidth * 0.4)
       .setAlpha(0.9);
     const burst = this.add
       .image(centerX, centerY + 18, PRIME_POP_EFFECT_ASSETS.successBurst.key)
-      .setDisplaySize(boardLayout.innerWidth * 0.72, boardLayout.innerWidth * 0.5)
+      .setDisplaySize(boardLayout.trayWidth * 0.72, boardLayout.trayWidth * 0.5)
       .setAlpha(0.88);
     const stars = this.add
       .image(centerX, centerY - 12, PRIME_POP_EFFECT_ASSETS.stars.key)
-      .setDisplaySize(boardLayout.innerWidth * 0.55, boardLayout.innerWidth * 0.45)
+      .setDisplaySize(boardLayout.trayWidth * 0.55, boardLayout.trayWidth * 0.45)
       .setAlpha(0.92);
     this.tweens.add({
       targets: shockwave,
@@ -960,7 +1048,7 @@ export class GameScene extends BaseScene {
     this.session.hintsUsed += 1;
     const level = Math.min(3, this.session.hintsUsed) as 1 | 2 | 3;
     const hint = HintSystem.createHint(this.board, this.session.currentRemainder, level);
-    this.feedbackText.setText(hint.message);
+    this.showRetryFeedback(hint.message || "\uD78C\uD2B8 \uD655\uC778!");
     for (const candy of hint.candies) {
       const object = this.candyObjects.get(candy.id);
       if (object) this.tweens.add({ targets: object, scale: 1.18, duration: 220, yoyo: true, repeat: 3 });
@@ -971,7 +1059,7 @@ export class GameScene extends BaseScene {
   private pauseGame(): void {
     this.isPaused = !this.isPaused;
     this.inputLocked = this.isPaused;
-    this.feedbackText.setText(this.isPaused ? "일시정지 중입니다." : "다시 시작!");
+    this.showRetryFeedback(this.isPaused ? "\uC77C\uC2DC\uC815\uC9C0" : "\uB2E4\uC2DC \uC2DC\uC791!");
   }
 
   private bindKeyboard(): void {

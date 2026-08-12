@@ -94,3 +94,14 @@ export const PRIME_POP_WORLD_MAP_ASSETS = {
   chapterSign4: { key: "number-break-world-map-sign-4", path: "assets/number-break/world-map/signs/generated/chapter_sign_4.png" },
 };
 
+export const PRIME_POP_GAMEPLAY_ASSETS = {
+  boardInnerTray: { key: "number-break-gameplay-board-inner-tray", path: "assets/number-break/gameplay/board_inner_tray.png" },
+  stageHeaderPanel: { key: "number-break-gameplay-stage-header-panel", path: "assets/number-break/gameplay/stage_header_panel.png" },
+  factorChainPanel: { key: "number-break-gameplay-factor-chain-panel", path: "assets/number-break/gameplay/factor_chain_panel.png" },
+  hudBar: { key: "number-break-gameplay-hud-bar", path: "assets/number-break/gameplay/gameplay_hud_bar.png" },
+  missionPanel: { key: "number-break-gameplay-mission-panel", path: "assets/number-break/gameplay/mission_panel.png" },
+  streakBadge: { key: "number-break-gameplay-streak-badge", path: "assets/number-break/gameplay/streak_badge.png" },
+  feedbackSuccess: { key: "number-break-gameplay-feedback-success", path: "assets/number-break/gameplay/generated/feedback_success.png" },
+  feedbackRetry: { key: "number-break-gameplay-feedback-retry", path: "assets/number-break/gameplay/generated/feedback_retry.png" },
+};
+
