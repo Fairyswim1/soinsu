@@ -133,6 +133,7 @@ export class GameScene extends BaseScene {
         strokeThickness: 5,
       })
       .setOrigin(0.5);
+    this.addButton(136, 50, "홈", () => this.scene.start("MenuScene"), 118);
     this.addImageButton(860, 50, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 118, 78);
     this.addImageButton(1002, 50, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 118, 78);
     this.addImageButton(1144, 50, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 118, 78);
