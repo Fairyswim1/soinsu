@@ -27,6 +27,9 @@ export const PRIME_POP_BUTTON_ASSETS = {
   pause: { key: "number-break-button-pause", path: "assets/number-break/runtime/ui/pause_button_118x78.png" },
   start: { key: "number-break-button-start", path: "assets/number-break/runtime/ui/start_button.png" },
   howto: { key: "number-break-button-howto", path: "assets/number-break/runtime/ui/howto_button.png" },
+  quickPractice: { key: "number-break-button-quick-practice", path: "assets/number-break/buttons/quick_practice_button.png" },
+  classroomMode: { key: "number-break-button-classroom-mode", path: "assets/number-break/buttons/classroom_mode_button.png" },
+  settings: { key: "number-break-button-settings", path: "assets/number-break/buttons/settings_button.png" },
 };
 
 export const PRIME_POP_HUD_ASSETS = {

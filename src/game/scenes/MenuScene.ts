@@ -4,18 +4,42 @@ import { SaveManager } from "../systems/SaveManager";
 import { BaseScene } from "./BaseScene";
 
 export class MenuScene extends BaseScene {
+  private readonly menuButtons: Phaser.GameObjects.Container[] = [];
+  private keyboardFocusIndex = -1;
+
   constructor() {
     super("MenuScene");
   }
 
   create(): void {
     this.drawTitleScreen();
-    this.addImageButton(640, 520, PRIME_POP_BUTTON_ASSETS.start.key, () => this.scene.start("LevelSelectScene"), 300, 124);
-    this.addImageButton(640, 620, PRIME_POP_BUTTON_ASSETS.howto.key, () => this.scene.start("TutorialScene"), 230, 96);
+    this.menuButtons.length = 0;
+    this.keyboardFocusIndex = -1;
 
-    this.addButton(430, 680, "빠른 연습", () => this.scene.start("QuickPracticeScene"), 170);
-    this.addButton(850, 680, "교실 모드", () => this.scene.start("ClassroomScene"), 170);
-    this.addButton(1100, 680, "설정", () => this.scene.start("SettingsScene"), 140);
+    this.addImageButton({
+      x: 640,
+      y: 430,
+      key: PRIME_POP_BUTTON_ASSETS.start.key,
+      alt: "게임 시작",
+      onClick: () => this.scene.start("LevelSelectScene"),
+      width: 300,
+      height: 116,
+      glowColor: 0xffe36a,
+      primary: true,
+    });
+    this.addImageButton({
+      x: 640,
+      y: 525,
+      key: PRIME_POP_BUTTON_ASSETS.howto.key,
+      alt: "게임 방법",
+      onClick: () => this.scene.start("TutorialScene"),
+      width: 220,
+      height: 85,
+      glowColor: 0x72ecff,
+    });
+    this.addSecondaryButtonGroup();
+    this.registerKeyboardMenuNavigation();
+
     SaveManager.update((data) => ({ ...data, lastMode: "campaign" }));
   }
 
@@ -27,29 +51,160 @@ export class MenuScene extends BaseScene {
     this.add.rectangle(640, 360, 1280, 720, 0x03091e, 0.08);
   }
 
-  private addImageButton(
-    x: number,
-    y: number,
-    key: string,
-    onClick: () => void,
-    width: number,
-    height: number,
-  ): Phaser.GameObjects.Container {
+  private addSecondaryButtonGroup(): void {
+    const isNarrowDisplay = this.scale.displaySize.width > 0 && this.scale.displaySize.width < 760;
+    const group = this.add.container(640, isNarrowDisplay ? 622 : 655);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x020718, 0.28);
+    shadow.fillEllipse(0, 12, isNarrowDisplay ? 520 : 760, isNarrowDisplay ? 168 : 150);
+    group.add(shadow);
+
+    const secondaryButtons = [
+      {
+        x: isNarrowDisplay ? -94 : -214,
+        y: isNarrowDisplay ? -28 : 0,
+        key: PRIME_POP_BUTTON_ASSETS.quickPractice.key,
+        alt: "빠른 연습",
+        onClick: () => this.scene.start("QuickPracticeScene"),
+      },
+      {
+        x: isNarrowDisplay ? 94 : 0,
+        y: isNarrowDisplay ? -28 : 0,
+        key: PRIME_POP_BUTTON_ASSETS.classroomMode.key,
+        alt: "교실 모드",
+        onClick: () => this.scene.start("ClassroomScene"),
+      },
+      {
+        x: isNarrowDisplay ? 0 : 214,
+        y: isNarrowDisplay ? 56 : 0,
+        key: PRIME_POP_BUTTON_ASSETS.settings.key,
+        alt: "설정",
+        onClick: () => this.scene.start("SettingsScene"),
+      },
+    ];
+
+    for (const button of secondaryButtons) {
+      group.add(
+        this.addImageButton({
+          x: button.x,
+          y: button.y,
+          key: button.key,
+          alt: button.alt,
+          onClick: button.onClick,
+          width: isNarrowDisplay ? 170 : 190,
+          height: isNarrowDisplay ? 113 : 127,
+          glowColor: 0x8beeff,
+        }),
+      );
+    }
+  }
+
+  private addImageButton({
+    x,
+    y,
+    key,
+    alt,
+    onClick,
+    width,
+    height,
+    glowColor,
+    primary = false,
+  }: {
+    x: number;
+    y: number;
+    key: string;
+    alt: string;
+    onClick: () => void;
+    width: number;
+    height: number;
+    glowColor: number;
+    primary?: boolean;
+  }): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
-    const button = this.add.image(0, 0, key);
     const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
     const fit = Math.min(width / source.width, height / source.height);
+    const displayWidth = source.width * fit;
+    const displayHeight = source.height * fit;
+
+    const glow = this.add.image(0, 0, key);
+    glow.setScale(fit);
+    glow.setTint(glowColor);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    glow.setAlpha(0);
+
+    const focusRing = this.add.graphics();
+    const drawFocusRing = (alpha: number): void => {
+      focusRing.clear();
+      focusRing.lineStyle(primary ? 5 : 4, glowColor, alpha);
+      focusRing.strokeRoundedRect(-displayWidth / 2 - 8, -displayHeight / 2 - 8, displayWidth + 16, displayHeight + 16, 24);
+    };
+    drawFocusRing(0);
+
+    const button = this.add.image(0, 0, key);
     button.setScale(fit);
-    container.add(button);
-    container.setSize(width, height);
+    button.setName(alt);
+
+    container.add([glow, focusRing, button]);
+    container.setSize(displayWidth, displayHeight);
     container.setInteractive({ useHandCursor: true });
-    container.on("pointerover", () => this.tweens.add({ targets: container, scale: 1.03, duration: 130, ease: "Sine.easeOut" }));
-    container.on("pointerout", () => this.tweens.add({ targets: container, scale: 1, duration: 130, ease: "Sine.easeOut" }));
+
+    const setFocused = (focused: boolean): void => drawFocusRing(focused ? 0.78 : 0);
+    const setHover = (hovered: boolean): void => {
+      this.tweens.add({
+        targets: container,
+        scale: hovered ? 1.03 : 1,
+        duration: 165,
+        ease: "Sine.easeOut",
+      });
+      this.tweens.add({
+        targets: glow,
+        alpha: hovered ? 0.22 : 0,
+        scale: hovered ? fit * 1.035 : fit,
+        duration: 165,
+        ease: "Sine.easeOut",
+      });
+    };
+
+    container.setData("setFocused", setFocused);
+    container.setData("activate", onClick);
+    container.on("pointerover", () => setHover(true));
+    container.on("pointerout", () => setHover(false));
     container.on("pointerdown", () => this.tweens.add({ targets: container, scale: 0.96, duration: 80, ease: "Sine.easeOut" }));
     container.on("pointerup", () => {
-      this.tweens.add({ targets: container, scale: 1, duration: 100, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: container, scale: 1.03, duration: 100, ease: "Sine.easeOut" });
       onClick();
     });
+
+    this.menuButtons.push(container);
     return container;
+  }
+
+  private registerKeyboardMenuNavigation(): void {
+    this.input.keyboard?.on("keydown-TAB", (event: KeyboardEvent) => {
+      event.preventDefault();
+      const direction = event.shiftKey ? -1 : 1;
+      this.focusMenuButton(this.keyboardFocusIndex + direction);
+    });
+    this.input.keyboard?.on("keydown-ENTER", () => this.activateFocusedMenuButton());
+    this.input.keyboard?.on("keydown-SPACE", () => this.activateFocusedMenuButton());
+  }
+
+  private focusMenuButton(index: number): void {
+    if (this.menuButtons.length === 0) return;
+    if (this.keyboardFocusIndex >= 0) {
+      const clearFocus = this.menuButtons[this.keyboardFocusIndex].getData("setFocused") as ((focused: boolean) => void) | undefined;
+      clearFocus?.(false);
+    }
+    this.keyboardFocusIndex = Phaser.Math.Wrap(index, 0, this.menuButtons.length);
+    const setFocus = this.menuButtons[this.keyboardFocusIndex].getData("setFocused") as ((focused: boolean) => void) | undefined;
+    setFocus?.(true);
+  }
+
+  private activateFocusedMenuButton(): void {
+    if (this.keyboardFocusIndex < 0) return;
+    const button = this.menuButtons[this.keyboardFocusIndex];
+    this.tweens.add({ targets: button, scale: 0.96, yoyo: true, duration: 80, ease: "Sine.easeOut" });
+    const activate = button.getData("activate") as (() => void) | undefined;
+    activate?.();
   }
 }
