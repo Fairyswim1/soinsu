@@ -200,7 +200,7 @@ export class LevelSelectScene extends BaseScene {
     for (const node of nodes) {
       const point = this.mapPoint(bounds, node.x, node.y);
       const size = this.nodeSize(node);
-      const container = this.add.container(point.x, point.y);
+      const container = this.add.container(point.x, point.y).setDepth(20);
       const nodeImage = this.add.image(0, 0, this.nodeAssetKey(node)).setDisplaySize(size, size);
       nodeImage.setAlpha(node.status === "locked" ? 0.8 : 1);
 
@@ -225,7 +225,7 @@ export class LevelSelectScene extends BaseScene {
       }
 
       if (node.status === "current") {
-        this.addCurrentStageEffects(container, nodeImage, point, size);
+        this.addCurrentStageEffects(nodeImage, point, size);
       }
 
       if (node.status === "completed") {
@@ -255,45 +255,46 @@ export class LevelSelectScene extends BaseScene {
     node: StageMapNode,
     bounds: MapBounds,
   ): void {
-    const hitRadius = this.nodeSize(node) * 0.48;
-    container.setInteractive(new Phaser.Geom.Circle(0, 0, hitRadius), Phaser.Geom.Circle.Contains);
-    container.input!.cursor = "pointer";
+    const hitSize = this.nodeSize(node) * 1.08;
+    const hitZone = this.add.zone(container.x, container.y, hitSize, hitSize).setDepth(40);
+    hitZone.setInteractive({ useHandCursor: true });
 
-    container.on("pointerover", () => {
+    hitZone.on("pointerover", () => {
       this.tweens.killTweensOf(container);
-      this.tweens.add({ targets: container, scale: 1.04, duration: 160, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: container, scale: 1.035, duration: 150, ease: "Sine.easeOut" });
       nodeImage.setTint(0xffffff);
-      nodeImage.setBlendMode(Phaser.BlendModes.ADD);
       this.showStageInfo(node, bounds);
     });
 
-    container.on("pointerout", () => {
+    hitZone.on("pointerout", () => {
       this.tweens.killTweensOf(container);
-      this.tweens.add({ targets: container, scale: 1, duration: 160, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: container, scale: 1, duration: 150, ease: "Sine.easeOut" });
       nodeImage.clearTint();
-      nodeImage.setBlendMode(Phaser.BlendModes.NORMAL);
       this.hideStageInfo();
     });
 
-    container.on("pointerdown", () => {
-      this.tweens.add({ targets: container, scale: 0.96, duration: 80, ease: "Sine.easeOut" });
+    hitZone.on("pointerdown", () => {
+      this.tweens.killTweensOf(container);
+      this.tweens.add({ targets: container, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
     });
 
-    container.on("pointerup", () => {
+    hitZone.on("pointerup", () => {
       this.scene.start("GameScene", { mode: "campaign", levelId: node.id });
     });
   }
 
   private addCurrentStageEffects(
-    container: Phaser.GameObjects.Container,
     nodeImage: Phaser.GameObjects.Image,
     point: Phaser.Math.Vector2,
     nodeSize: number,
   ): void {
-    this.tweens.add({ targets: nodeImage, scaleX: 1.06, scaleY: 1.06, duration: 980, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    const glint = this.add.image(point.x, point.y, PRIME_POP_WORLD_MAP_ASSETS.checkpointGlow.key);
+    glint.setDisplaySize(nodeSize * 1.35, nodeSize * 1.35).setDepth(19).setAlpha(0.18).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: glint, alpha: 0.34, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+    this.tweens.add({ targets: nodeImage, alpha: 0.92, duration: 900, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
 
     this.currentMarker = this.add.image(point.x, point.y - nodeSize * 0.86, PRIME_POP_WORLD_MAP_ASSETS.currentMarker.key);
-    this.currentMarker.setDisplaySize(48, 72).setDepth(container.depth + 4).setAlpha(0.96);
+    this.currentMarker.setDisplaySize(48, 72).setDepth(45).setAlpha(0.96);
     this.currentMarker.setInteractive(false);
     this.tweens.add({ targets: this.currentMarker, y: this.currentMarker.y - 4, duration: 750, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
@@ -386,10 +387,11 @@ export class LevelSelectScene extends BaseScene {
     const x = bounds.left + 112;
     const y = bounds.top + bounds.height - 58;
     const button = this.add.image(x, y, PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key).setDisplaySize(118, 58).setDepth(60);
-    button.setInteractive({ useHandCursor: true });
-    button.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.03, duration: 150, ease: "Sine.easeOut" }));
-    button.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 150, ease: "Sine.easeOut" }));
-    button.on("pointerdown", () => this.tweens.add({ targets: button, scale: 0.96, duration: 70, ease: "Sine.easeOut" }));
-    button.on("pointerup", () => this.scene.start("MenuScene"));
+    const hitZone = this.add.zone(x, y, 142, 72).setDepth(80);
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.03, duration: 150, ease: "Sine.easeOut" }));
+    hitZone.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 150, ease: "Sine.easeOut" }));
+    hitZone.on("pointerdown", () => this.tweens.add({ targets: button, scale: 0.96, duration: 70, ease: "Sine.easeOut" }));
+    hitZone.on("pointerup", () => this.scene.start("MenuScene"));
   }
 }
