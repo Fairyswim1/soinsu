@@ -77,6 +77,7 @@ export class GameScene extends BaseScene {
   }
 
   create(data: GameSceneData): void {
+    this.resetSceneState();
     this.addBackground();
     const level = data.level ?? LevelManager.getLevel(data.levelId ?? 1);
     const mode = data.mode ?? "campaign";
@@ -103,6 +104,21 @@ export class GameScene extends BaseScene {
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.timerEvent?.remove(false));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.cancelDrag, this));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.off(Phaser.Input.Events.GAME_OUT, this.cancelDrag, this));
+  }
+
+  private resetSceneState(): void {
+    this.timerEvent?.remove(false);
+    this.timerEvent = undefined;
+    this.candyObjects.clear();
+    this.blockers = [];
+    this.isDragging = false;
+    this.inputLocked = false;
+    this.isPaused = false;
+    this.lastPointerCellKey = undefined;
+    this.currentPointer = undefined;
+    this.displayedTarget = undefined;
+    this.input.keyboard?.off("keydown-ESC");
+    this.input.keyboard?.off("keydown-H");
   }
 
   private drawShell(): void {

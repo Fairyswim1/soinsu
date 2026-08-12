@@ -54,7 +54,7 @@ export const PRIME_POP_EFFECT_ASSETS = {
 };
 
 export const PRIME_POP_SCREEN_ASSETS = {
-  titleScreen: { key: "number-break-title-screen", path: "assets/number-break/screens/title/title_screen.png" },
+  titleScreen: { key: "number-break-title-screen", path: "assets/number-break/screens/title/title_screen_v2.png" },
   stageClearPopup: { key: "number-break-stage-clear-popup", path: "assets/number-break/popups/stage_clear_popup.png" },
   retryPopup: { key: "number-break-retry-popup", path: "assets/number-break/popups/retry_popup.png" },
 };

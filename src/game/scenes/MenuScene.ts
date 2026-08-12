@@ -18,23 +18,23 @@ export class MenuScene extends BaseScene {
 
     this.addImageButton({
       x: 640,
-      y: 430,
+      y: 488,
       key: PRIME_POP_BUTTON_ASSETS.start.key,
       alt: "게임 시작",
       onClick: () => this.scene.start("LevelSelectScene"),
-      width: 300,
-      height: 116,
+      width: 280,
+      height: 108,
       glowColor: 0xffe36a,
       primary: true,
     });
     this.addImageButton({
       x: 640,
-      y: 525,
+      y: 575,
       key: PRIME_POP_BUTTON_ASSETS.howto.key,
       alt: "게임 방법",
       onClick: () => this.scene.start("TutorialScene"),
-      width: 220,
-      height: 85,
+      width: 204,
+      height: 79,
       glowColor: 0x72ecff,
     });
     this.addSecondaryButtonGroup();
@@ -53,15 +53,15 @@ export class MenuScene extends BaseScene {
 
   private addSecondaryButtonGroup(): void {
     const isNarrowDisplay = this.scale.displaySize.width > 0 && this.scale.displaySize.width < 760;
-    const group = this.add.container(640, isNarrowDisplay ? 622 : 655);
+    const group = this.add.container(640, isNarrowDisplay ? 638 : 658);
     const shadow = this.add.graphics();
     shadow.fillStyle(0x020718, 0.28);
-    shadow.fillEllipse(0, 12, isNarrowDisplay ? 520 : 760, isNarrowDisplay ? 168 : 150);
+    shadow.fillEllipse(0, 8, isNarrowDisplay ? 520 : 630, isNarrowDisplay ? 144 : 82);
     group.add(shadow);
 
     const secondaryButtons = [
       {
-        x: isNarrowDisplay ? -94 : -214,
+        x: isNarrowDisplay ? -94 : -204,
         y: isNarrowDisplay ? -28 : 0,
         key: PRIME_POP_BUTTON_ASSETS.quickPractice.key,
         alt: "빠른 연습",
@@ -75,7 +75,7 @@ export class MenuScene extends BaseScene {
         onClick: () => this.scene.start("ClassroomScene"),
       },
       {
-        x: isNarrowDisplay ? 0 : 214,
+        x: isNarrowDisplay ? 0 : 204,
         y: isNarrowDisplay ? 56 : 0,
         key: PRIME_POP_BUTTON_ASSETS.settings.key,
         alt: "설정",
@@ -91,8 +91,8 @@ export class MenuScene extends BaseScene {
           key: button.key,
           alt: button.alt,
           onClick: button.onClick,
-          width: isNarrowDisplay ? 170 : 190,
-          height: isNarrowDisplay ? 113 : 127,
+          width: isNarrowDisplay ? 170 : 174,
+          height: isNarrowDisplay ? 113 : 116,
           glowColor: 0x8beeff,
         }),
       );

@@ -45,26 +45,6 @@ export class ResultScene extends BaseScene {
     this.addPopupImage(PRIME_POP_SCREEN_ASSETS.stageClearPopup.key, 640, 360, 570, 570);
     const equations = this.completedEquations(session);
     this.add
-      .text(640, 285, "스테이지 클리어!", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "42px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#081236",
-        strokeThickness: 7,
-      })
-      .setOrigin(0.5);
-    this.add
-      .text(640, 338, "분해 성공!", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "30px",
-        color: "#bff7ff",
-        fontStyle: "bold",
-        stroke: "#081236",
-        strokeThickness: 5,
-      })
-      .setOrigin(0.5);
-    this.add
       .text(640, 405, `점수 ${session.score}   ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`, {
         fontFamily: "Arial, sans-serif",
         fontSize: "26px",
