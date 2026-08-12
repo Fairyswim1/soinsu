@@ -4,6 +4,7 @@ import {
   PRIME_POP_EFFECT_ASSETS,
   PRIME_POP_HUD_ASSETS,
   PRIME_POP_SCREEN_ASSETS,
+  PRIME_POP_WORLD_MAP_ASSETS,
   PRIME_TILE_ASSETS,
   primeTileKey,
 } from "./primePopAssets";
@@ -25,4 +26,5 @@ export const assetManifest: AssetEntry[] = [
   ...Object.values(PRIME_POP_HUD_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
   ...Object.values(PRIME_POP_EFFECT_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
   ...Object.values(PRIME_POP_SCREEN_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
+  ...Object.values(PRIME_POP_WORLD_MAP_ASSETS).map(({ key, path }) => ({ key, path, type: "image" as const })),
 ];
