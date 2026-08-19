@@ -1,12 +1,31 @@
 import Phaser from "phaser";
+import { gameConfig } from "../config/gameConfig";
 import { PRIME_POP_BOARD_ASSETS } from "../config/primePopAssets";
-import { uiTheme } from "../config/theme";
+import { gameFontFamily, uiTheme } from "../config/theme";
 
 export class BaseScene extends Phaser.Scene {
+  protected getCroppedTexture(
+    key: string,
+    crop: { x: number; y: number; width: number; height: number },
+  ): string {
+    const textureKey = `${key}-crop-${crop.x}-${crop.y}-${crop.width}-${crop.height}`;
+    if (this.textures.exists(textureKey)) return textureKey;
+
+    const source = this.textures.get(key).getSourceImage() as CanvasImageSource;
+    const texture = this.textures.createCanvas(textureKey, crop.width, crop.height);
+    if (!texture) return key;
+
+    const context = texture.getContext();
+    context.clearRect(0, 0, crop.width, crop.height);
+    context.drawImage(source, crop.x, crop.y, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    texture.refresh();
+    return textureKey;
+  }
+
   protected addTitle(text: string, y = 62): Phaser.GameObjects.Text {
     return this.add
       .text(640, y, text, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "42px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -39,9 +58,10 @@ export class BaseScene extends Phaser.Scene {
       bg.strokeRoundedRect(-width / 2 + 3, -26, width - 6, 52, 16);
     };
     drawButton(0x17225e);
+    const hitZone = this.add.zone(x, y, width, 70).setInteractive({ useHandCursor: true });
     const text = this.add
       .text(0, 0, label, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "21px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -51,13 +71,13 @@ export class BaseScene extends Phaser.Scene {
       .setOrigin(0.5);
     container.add([bg, text]);
     container.setSize(width, 58);
-    container.setInteractive({ useHandCursor: true });
-    container.on("pointerdown", () => {
+    hitZone.on("pointerdown", () => {
       this.tweens.add({ targets: container, scale: 0.96, duration: 70, yoyo: true });
       onClick();
     });
-    container.on("pointerover", () => drawButton(0x24337c));
-    container.on("pointerout", () => drawButton(0x17225e));
+    hitZone.on("pointerover", () => drawButton(0x24337c));
+    hitZone.on("pointerout", () => drawButton(0x17225e));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => hitZone.destroy());
     return container;
   }
 
@@ -67,16 +87,16 @@ export class BaseScene extends Phaser.Scene {
 
   protected addBackground(): void {
     if (this.textures.exists(PRIME_POP_BOARD_ASSETS.background.key)) {
-      const image = this.add.image(640, 360, PRIME_POP_BOARD_ASSETS.background.key);
+      const image = this.add.image(gameConfig.width / 2, gameConfig.height / 2, PRIME_POP_BOARD_ASSETS.background.key);
       const source = this.textures.get(PRIME_POP_BOARD_ASSETS.background.key).getSourceImage() as HTMLImageElement;
-      const scale = Math.max(1280 / source.width, 720 / source.height);
+      const scale = Math.max(gameConfig.width / source.width, gameConfig.height / source.height);
       image.setDisplaySize(source.width * scale, source.height * scale);
-      this.add.rectangle(640, 360, 1280, 720, 0x04071f, 0.18);
+      this.add.rectangle(gameConfig.width / 2, gameConfig.height / 2, gameConfig.width, gameConfig.height, 0x04071f, 0.18);
       return;
     }
     const g = this.add.graphics();
     g.fillGradientStyle(0x070b26, 0x10194d, 0x192e69, 0x321e66, 1);
-    g.fillRect(0, 0, 1280, 720);
+    g.fillRect(0, 0, gameConfig.width, gameConfig.height);
     g.fillStyle(0x5be0ff, 0.08);
     g.fillCircle(110, 120, 190);
     g.fillStyle(0x9f7cff, 0.08);

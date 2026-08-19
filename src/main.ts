@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./styles/global.css";
 import { gameConfig } from "./game/config/gameConfig";
+import { loadGameFonts } from "./game/config/theme";
 import { BootScene } from "./game/scenes/BootScene";
 import { ClassroomScene } from "./game/scenes/ClassroomScene";
 import { GameScene } from "./game/scenes/GameScene";
@@ -44,4 +45,6 @@ const config: Phaser.Types.Core.GameConfig = {
   ],
 };
 
-new Phaser.Game(config);
+void loadGameFonts().finally(() => {
+  new Phaser.Game(config);
+});

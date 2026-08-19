@@ -28,7 +28,7 @@ export const PRIME_POP_BUTTON_ASSETS = {
   start: { key: "number-break-button-start", path: "assets/number-break/runtime/ui/start_button.png" },
   howto: { key: "number-break-button-howto", path: "assets/number-break/runtime/ui/howto_button.png" },
   quickPractice: { key: "number-break-button-quick-practice", path: "assets/number-break/buttons/quick_practice_button.png" },
-  classroomMode: { key: "number-break-button-classroom-mode", path: "assets/number-break/buttons/classroom_mode_button.png" },
+  classroomMode: { key: "number-break-button-classroom-mode", path: "assets/number-break/buttons/fighter_mode_button.png?v=20260819-1215" },
   settings: { key: "number-break-button-settings", path: "assets/number-break/buttons/settings_button.png" },
 };
 
@@ -55,14 +55,42 @@ export const PRIME_POP_EFFECT_ASSETS = {
 
 export const PRIME_POP_SCREEN_ASSETS = {
   titleScreen: { key: "number-break-title-screen", path: "assets/number-break/screens/title/title_screen_v2.png" },
+  tutorialScreen: { key: "number-break-tutorial-screen", path: "assets/number-break/screens/tutorial/howto_screen.png" },
   stageClearPopup: { key: "number-break-stage-clear-popup", path: "assets/number-break/popups/stage_clear_popup.png" },
   retryPopup: { key: "number-break-retry-popup", path: "assets/number-break/popups/retry_popup.png" },
+};
+
+export const PRIME_POP_SETTINGS_ASSETS = {
+  background: { key: "number-break-settings-background", path: "assets/number-break/settings/settings_background.png" },
+  toggleMute: { key: "number-break-settings-toggle-mute", path: "assets/number-break/settings/btn_toggle_mute.png" },
+  toggleReduceMotion: {
+    key: "number-break-settings-toggle-reduce-motion",
+    path: "assets/number-break/settings/btn_toggle_reduce_motion.png",
+  },
+  resetSave: { key: "number-break-settings-reset-save", path: "assets/number-break/settings/btn_reset_save.png" },
+  unlockAll: { key: "number-break-settings-unlock-all", path: "assets/number-break/settings/btn_unlock_all.png?v=20260819-1205" },
+  menu: { key: "number-break-settings-menu", path: "assets/number-break/settings/btn_menu.png" },
+};
+
+export const PRIME_POP_BATTLE_ASSETS = {
+  background: { key: "number-break-battle-background", path: "assets/number-break/battle/battle_background.png" },
+  stageSelect: { key: "number-break-battle-stage-select", path: "assets/number-break/battle/btn_stage_select.png" },
+  resetScore: { key: "number-break-battle-reset-score", path: "assets/number-break/battle/btn_reset_score.png" },
+  title: { key: "number-break-battle-title", path: "assets/number-break/battle/btn_title.png" },
+};
+
+export const PRIME_POP_PRACTICE_ASSETS = {
+  quickPracticeBackground: {
+    key: "number-break-quick-practice-background",
+    path: "assets/number-break/practice/practicequick_practice_background.png",
+  },
 };
 
 export const PRIME_POP_WORLD_MAP_ASSETS = {
   background: { key: "number-break-world-map-bg", path: "assets/number-break/world-map/background/chapter_map_bg.png" },
   currentMarker: { key: "number-break-world-map-current-marker", path: "assets/number-break/world-map/markers/current_stage_marker.png" },
   backToTitle: { key: "number-break-world-map-back-title", path: "assets/number-break/world-map/ui/back_to_title_button.png" },
+  lockIcon: { key: "number-break-world-map-lock-icon", path: "assets/number-break/world-map/ui/lock_icon.png" },
   normalNode: { key: "number-break-world-map-node-normal", path: "assets/number-break/world-map/nodes/generated/normal_node.png" },
   currentNode: { key: "number-break-world-map-node-current", path: "assets/number-break/world-map/nodes/generated/current_node.png" },
   completedNode: { key: "number-break-world-map-node-completed", path: "assets/number-break/world-map/nodes/generated/completed_node.png" },

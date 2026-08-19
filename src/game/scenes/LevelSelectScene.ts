@@ -1,7 +1,11 @@
 import Phaser from "phaser";
+import { gameConfig } from "../config/gameConfig";
 import { levels } from "../config/levels";
 import { PRIME_POP_WORLD_MAP_ASSETS } from "../config/primePopAssets";
+import { gameFontFamily } from "../config/theme";
+import type { ClassroomState, GameMode } from "../models/GameSession";
 import type { LevelConfig } from "../models/LevelModel";
+import { LevelManager } from "../systems/LevelManager";
 import { SaveManager, type SaveData } from "../systems/SaveManager";
 import { BaseScene } from "./BaseScene";
 
@@ -30,6 +34,11 @@ type StageMapNode = StagePosition & {
   type: StageNodeType;
 };
 
+type LevelSelectSceneData = {
+  mode?: GameMode;
+  classroomState?: ClassroomState;
+};
+
 const CHAPTER = {
   title: "\uCCAB \uC5F0\uACB0",
   subtitle: "\uC2A4\uD14C\uC774\uC9C0\uB97C \uC120\uD0DD\uD558\uC138\uC694",
@@ -38,15 +47,15 @@ const CHAPTER = {
 
 const LEVEL_DISPLAY_TITLES: Record<number, string> = {
   1: "\uCCAB \uC5F0\uACB0",
-  2: "5 \uB354\uD558\uAE30",
+  2: "5\uC758 \uB4F1\uC7A5",
   3: "\uAC19\uC740 \uC18C\uC218 \uBC18\uBCF5",
   4: "\uAE34 \uC5F0\uACB0 \uBCF4\uB108\uC2A4",
-  5: "\uC911\uAC04 \uBCF4\uC0C1\uB300",
-  6: "\uBD88\uC548\uC815\uD55C \uC18C\uC218",
-  7: "7\uC758 \uAD00\uBB38",
-  8: "\uD569\uC131\uC218 \uC5BC\uC74C",
+  5: "\uC81C\uD55C \uD130\uCE58",
+  6: "\uB113\uC5B4\uC9C4 \uC120\uD0DD\uC9C0",
+  7: "7\uC758 \uB4F1\uC7A5",
+  8: "\uD070 \uC218 \uBD84\uD574",
   9: "\uC5EC\uB7EC \uBAA9\uD45C \uC5F0\uC18D",
-  10: "\uD2B9\uC218 \uBB38\uC7A5 \uC2DC\uD5D8",
+  10: "\uCD5C\uC885 \uBD84\uD574",
 };
 
 const STAGE_POSITIONS: StagePosition[] = [
@@ -65,16 +74,21 @@ const STAGE_POSITIONS: StagePosition[] = [
 const NODE_DISPLAY_SIZE = 74;
 const SPECIAL_NODE_DISPLAY_SIZE = 82;
 const FINAL_NODE_DISPLAY_SIZE = 92;
+const BACK_TO_TITLE_CROP = { x: 8, y: 384, width: 1239, height: 444 };
 
 export class LevelSelectScene extends BaseScene {
   private infoPanel?: Phaser.GameObjects.Container;
   private currentMarker?: Phaser.GameObjects.Image;
+  private mode: GameMode = "campaign";
+  private classroomState?: ClassroomState;
 
   constructor() {
     super("LevelSelectScene");
   }
 
-  create(): void {
+  create(data: LevelSelectSceneData = {}): void {
+    this.mode = data.mode ?? "campaign";
+    this.classroomState = data.classroomState;
     this.cameras.main.setBackgroundColor("#050b25");
 
     const save = SaveManager.load();
@@ -95,7 +109,15 @@ export class LevelSelectScene extends BaseScene {
       const position = STAGE_POSITIONS.find((candidate) => candidate.id === level.id) ?? this.generatedPosition(index, levels.length);
       const stars = Math.max(0, Math.min(3, save.levelStars[String(level.id)] ?? 0));
       const status: StageStatus =
-        stars > 0 ? "completed" : level.id === currentLevelId ? "current" : level.id < currentLevelId ? "unlocked" : "locked";
+        this.mode === "classroom"
+          ? "unlocked"
+          : stars > 0
+            ? "completed"
+            : level.id === currentLevelId
+              ? "current"
+              : level.id < currentLevelId
+                ? "unlocked"
+                : "locked";
 
       return {
         ...position,
@@ -120,22 +142,18 @@ export class LevelSelectScene extends BaseScene {
 
   private addWorldMapBackground(): MapBounds {
     const key = PRIME_POP_WORLD_MAP_ASSETS.background.key;
-    const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
-    const maxWidth = 1224;
-    const maxHeight = 688;
-    const scale = Math.min(maxWidth / source.width, maxHeight / source.height);
-    const width = source.width * scale;
-    const height = source.height * scale;
-    const centerX = 640;
-    const centerY = 372;
+    const width = gameConfig.width;
+    const height = gameConfig.height;
+    const centerX = gameConfig.width / 2;
+    const centerY = gameConfig.height / 2;
 
     this.add.image(centerX, centerY, key).setDisplaySize(width, height);
 
     const vignette = this.add.graphics();
     vignette.fillStyle(0x02051b, 0.22);
-    vignette.fillRect(0, 0, 1280, 720);
+    vignette.fillRect(0, 0, gameConfig.width, gameConfig.height);
     vignette.fillGradientStyle(0x02051b, 0x02051b, 0x02051b, 0x02051b, 0.44, 0.08, 0.1, 0.46);
-    vignette.fillRect(0, 0, 1280, 720);
+    vignette.fillRect(0, 0, gameConfig.width, gameConfig.height);
 
     return {
       left: centerX - width / 2,
@@ -205,8 +223,8 @@ export class LevelSelectScene extends BaseScene {
       nodeImage.setAlpha(node.status === "locked" ? 0.8 : 1);
 
       const numberText = this.add
-        .text(0, -1, String(node.id), {
-          fontFamily: "Arial, sans-serif",
+        .text(0, -5, String(node.id), {
+          fontFamily: gameFontFamily,
           fontSize: node.id >= 10 ? "25px" : "31px",
           color: node.status === "locked" ? "#d7e6ff" : "#ffffff",
           fontStyle: "bold",
@@ -255,26 +273,35 @@ export class LevelSelectScene extends BaseScene {
     node: StageMapNode,
     bounds: MapBounds,
   ): void {
-    nodeImage.setInteractive({ useHandCursor: true });
+    const hitSize = this.nodeSize(node) * 1.08;
+    const hitZone = this.add.zone(container.x, container.y, hitSize, hitSize).setDepth(40);
+    hitZone.setInteractive({ useHandCursor: true });
 
-    nodeImage.on("pointerover", () => {
+    hitZone.on("pointerover", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 1.035, duration: 150, ease: "Sine.easeOut" });
       nodeImage.setTint(0xffffff);
       this.showStageInfo(node, bounds);
     });
 
-    nodeImage.on("pointerout", () => {
+    hitZone.on("pointerout", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 1, duration: 150, ease: "Sine.easeOut" });
       nodeImage.clearTint();
       this.hideStageInfo();
     });
 
-    nodeImage.on("pointerdown", () => {
+    hitZone.on("pointerdown", () => {
       this.tweens.killTweensOf(container);
       this.tweens.add({ targets: container, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
-      this.scene.start("GameScene", { mode: "campaign", levelId: node.id });
+    });
+
+    hitZone.on("pointerup", () => {
+      this.scene.start("GameScene", {
+        mode: this.mode,
+        levelId: node.id,
+        classroomState: this.classroomState,
+      });
     });
   }
 
@@ -290,7 +317,7 @@ export class LevelSelectScene extends BaseScene {
 
     this.currentMarker = this.add.image(point.x, point.y - nodeSize * 0.86, PRIME_POP_WORLD_MAP_ASSETS.currentMarker.key);
     this.currentMarker.setDisplaySize(48, 72).setDepth(45).setAlpha(0.96);
-    this.currentMarker.setInteractive(false);
+    this.currentMarker.disableInteractive();
     this.tweens.add({ targets: this.currentMarker, y: this.currentMarker.y - 4, duration: 750, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
   }
 
@@ -311,8 +338,8 @@ export class LevelSelectScene extends BaseScene {
     this.hideStageInfo();
 
     const point = this.mapPoint(bounds, node.x, node.y);
-    const panelWidth = 214;
-    const panelHeight = 118;
+    const panelWidth = 260;
+    const panelHeight = 142;
     const x = Phaser.Math.Clamp(point.x + 8, bounds.left + panelWidth / 2 + 12, bounds.left + bounds.width - panelWidth / 2 - 12);
     const y = Phaser.Math.Clamp(point.y - 100, bounds.top + panelHeight / 2 + 10, bounds.top + bounds.height - panelHeight / 2 - 10);
     const panel = this.add.container(x, y).setDepth(50);
@@ -323,15 +350,17 @@ export class LevelSelectScene extends BaseScene {
     bg.strokeRoundedRect(-panelWidth / 2, -panelHeight / 2, panelWidth, panelHeight, 18);
 
     const score = SaveManager.load().levelScores[String(node.id)] ?? 0;
-    const difficulty = Math.min(3, Math.max(1, Math.ceil(node.level.targets.length / 2)));
+    const targetCount = node.level.targetRules?.targetCount ?? node.level.targets.length;
+    const difficulty = Math.min(3, Math.max(1, Math.ceil(targetCount / 2)));
     const text = this.add
-      .text(-panelWidth / 2 + 18, -panelHeight / 2 + 14, `\uC2A4\uD14C\uC774\uC9C0 ${node.id}\n${node.name}\n\uBAA9\uD45C \uC218: ${node.level.targets.join(", ")}\n\uB09C\uC774\uB3C4: ${"\u2605".repeat(difficulty)}${"\u2606".repeat(3 - difficulty)}\n\uCD5C\uACE0 \uAE30\uB85D: ${node.stars ? `${node.stars}\uC131 ? ${score}\uC810` : "\uC5C6\uC74C"}`, {
-        fontFamily: "Arial, sans-serif",
+      .text(-panelWidth / 2 + 18, -panelHeight / 2 + 14, `\uC2A4\uD14C\uC774\uC9C0 ${node.id}\n${node.name}\n${LevelManager.describeTargetRules(node.level)}\n\uB09C\uC774\uB3C4: ${"\u2605".repeat(difficulty)}${"\u2606".repeat(3 - difficulty)}\n\uCD5C\uACE0 \uAE30\uB85D: ${node.stars ? `${node.stars}\uC131 ? ${score}\uC810` : "\uC5C6\uC74C"}`, {
+        fontFamily: gameFontFamily,
         fontSize: "15px",
         color: "#e9fbff",
-        lineSpacing: 3,
+        lineSpacing: 4,
         stroke: "#06113d",
         strokeThickness: 3,
+        wordWrap: { width: panelWidth - 36, useAdvancedWrap: true },
       })
       .setOrigin(0, 0);
 
@@ -353,9 +382,15 @@ export class LevelSelectScene extends BaseScene {
     const sign = this.add.image(x, y, CHAPTER.signKey).setDisplaySize(246, 66).setDepth(60);
     sign.setAlpha(0.96);
 
+    const title = this.mode === "classroom" ? "교실 대결" : CHAPTER.title;
+    const subtitle =
+      this.mode === "classroom" && this.classroomState
+        ? `${this.classroomState.teams[this.classroomState.currentTeamIndex]} 차례  ·  스테이지 선택`
+        : CHAPTER.subtitle;
+
     this.add
-      .text(x, y - 6, CHAPTER.title, {
-        fontFamily: "Arial, sans-serif",
+      .text(x, y - 6, title, {
+        fontFamily: gameFontFamily,
         fontSize: "25px",
         color: "#fff4c2",
         fontStyle: "bold",
@@ -366,8 +401,8 @@ export class LevelSelectScene extends BaseScene {
       .setDepth(61);
 
     this.add
-      .text(x, y + 24, CHAPTER.subtitle, {
-        fontFamily: "Arial, sans-serif",
+      .text(x, y + 24, subtitle, {
+        fontFamily: gameFontFamily,
         fontSize: "14px",
         color: "#bff7ff",
         fontStyle: "bold",
@@ -380,13 +415,32 @@ export class LevelSelectScene extends BaseScene {
 
   private addBackToTitleButton(bounds: MapBounds): void {
     const x = bounds.left + 112;
-    const y = bounds.top + bounds.height - 58;
-    const button = this.add.image(x, y, PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key).setDisplaySize(118, 58).setDepth(80);
-    button.setInteractive({ useHandCursor: true });
-    button.on("pointerover", () => this.tweens.add({ targets: button, scale: 1.03, duration: 150, ease: "Sine.easeOut" }));
-    button.on("pointerout", () => this.tweens.add({ targets: button, scale: 1, duration: 150, ease: "Sine.easeOut" }));
-    button.on("pointerdown", () => {
-      this.tweens.add({ targets: button, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
+    const y = bounds.top + bounds.height - 56;
+    const buttonKey = this.getCroppedTexture(PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key, BACK_TO_TITLE_CROP);
+    const button = this.add.image(x, y, buttonKey).setDisplaySize(172, 62).setDepth(60);
+    const baseScaleX = button.scaleX;
+    const baseScaleY = button.scaleY;
+    const hitZone = this.add.zone(x, y, 190, 78).setDepth(80);
+    const setButtonScale = (scale: number, duration: number): void => {
+      this.tweens.killTweensOf(button);
+      this.tweens.add({
+        targets: button,
+        scaleX: baseScaleX * scale,
+        scaleY: baseScaleY * scale,
+        duration,
+        ease: "Sine.easeOut",
+      });
+    };
+
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.on("pointerover", () => setButtonScale(1.03, 150));
+    hitZone.on("pointerout", () => setButtonScale(1, 150));
+    hitZone.on("pointerdown", () => {
+      setButtonScale(0.96, 70);
+      if (this.mode === "classroom") {
+        this.scene.start("ClassroomScene", { classroomState: this.classroomState });
+        return;
+      }
       this.scene.start("MenuScene");
     });
   }

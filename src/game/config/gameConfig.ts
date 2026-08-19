@@ -1,6 +1,6 @@
 export const gameConfig = {
   width: 1280,
-  height: 720,
+  height: 900,
   background: "#161a3d",
   board: {
     columns: 8,

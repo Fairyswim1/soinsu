@@ -10,6 +10,12 @@ describe("BoardGenerator and SelectionSystem", () => {
     expect(generator.shuffleCount).toBeGreaterThan(0);
   });
 
+  it("seeds an adjacent chain for every prime factor in the target", () => {
+    const generator = new BoardGenerator({ availablePrimes: [2, 3, 5, 7], seed: 13 });
+    const board = generator.createBoard(32);
+    expect(generator.hasFactorChain(board, 32)).toBe(true);
+  });
+
   it("refills after removal while preserving a playable board", () => {
     const generator = new BoardGenerator({ availablePrimes: [2, 3, 5], seed: 7 });
     const board = generator.createBoard(45);
@@ -18,6 +24,7 @@ describe("BoardGenerator and SelectionSystem", () => {
     generator.refill(board, 45);
     expect(board.flat().filter(Boolean)).toHaveLength(48);
     expect(generator.hasValidMove(board, 45)).toBe(true);
+    expect(generator.hasFactorChain(board, 45)).toBe(true);
   });
 
   it("supports dragging back to undo the last selected cell", () => {

@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { gameConfig } from "../config/gameConfig";
 import { PRIME_POP_BUTTON_ASSETS, PRIME_POP_SCREEN_ASSETS } from "../config/primePopAssets";
 import { SaveManager } from "../systems/SaveManager";
 import { BaseScene } from "./BaseScene";
@@ -18,7 +19,7 @@ export class MenuScene extends BaseScene {
 
     this.addImageButton({
       x: 640,
-      y: 536,
+      y: 636,
       key: PRIME_POP_BUTTON_ASSETS.start.key,
       alt: "게임 시작",
       onClick: () => this.scene.start("LevelSelectScene"),
@@ -29,7 +30,7 @@ export class MenuScene extends BaseScene {
     });
     this.addImageButton({
       x: 640,
-      y: 612,
+      y: 720,
       key: PRIME_POP_BUTTON_ASSETS.howto.key,
       alt: "게임 방법",
       onClick: () => this.scene.start("TutorialScene"),
@@ -44,38 +45,38 @@ export class MenuScene extends BaseScene {
   }
 
   private drawTitleScreen(): void {
-    const image = this.add.image(640, 360, PRIME_POP_SCREEN_ASSETS.titleScreen.key);
+    const image = this.add.image(gameConfig.width / 2, gameConfig.height / 2, PRIME_POP_SCREEN_ASSETS.titleScreen.key);
     const source = this.textures.get(PRIME_POP_SCREEN_ASSETS.titleScreen.key).getSourceImage() as HTMLImageElement;
-    const scale = Math.max(1280 / source.width, 720 / source.height);
+    const scale = Math.max(gameConfig.width / source.width, gameConfig.height / source.height);
     image.setDisplaySize(source.width * scale, source.height * scale);
-    this.add.rectangle(640, 360, 1280, 720, 0x03091e, 0.08);
+    this.add.rectangle(gameConfig.width / 2, gameConfig.height / 2, gameConfig.width, gameConfig.height, 0x03091e, 0.08);
   }
 
   private addSecondaryButtonGroup(): void {
     const isNarrowDisplay = this.scale.displaySize.width > 0 && this.scale.displaySize.width < 760;
-    const group = this.add.container(640, isNarrowDisplay ? 650 : 680);
+    const group = this.add.container(640, isNarrowDisplay ? 802 : 812);
     const shadow = this.add.graphics();
     shadow.fillStyle(0x020718, 0.28);
-    shadow.fillEllipse(0, 4, isNarrowDisplay ? 520 : 560, isNarrowDisplay ? 132 : 76);
+    shadow.fillEllipse(0, 4, isNarrowDisplay ? 600 : 680, isNarrowDisplay ? 148 : 92);
     group.add(shadow);
 
     const secondaryButtons = [
       {
-        x: isNarrowDisplay ? -94 : -168,
+        x: isNarrowDisplay ? -112 : -230,
         y: isNarrowDisplay ? -28 : 0,
         key: PRIME_POP_BUTTON_ASSETS.quickPractice.key,
         alt: "빠른 연습",
         onClick: () => this.scene.start("QuickPracticeScene"),
       },
       {
-        x: isNarrowDisplay ? 94 : 0,
+        x: isNarrowDisplay ? 112 : 0,
         y: isNarrowDisplay ? -28 : 0,
         key: PRIME_POP_BUTTON_ASSETS.classroomMode.key,
-        alt: "교실 모드",
+        alt: "대결 모드",
         onClick: () => this.scene.start("ClassroomScene"),
       },
       {
-        x: isNarrowDisplay ? 0 : 168,
+        x: isNarrowDisplay ? 0 : 230,
         y: isNarrowDisplay ? 56 : 0,
         key: PRIME_POP_BUTTON_ASSETS.settings.key,
         alt: "설정",
@@ -91,8 +92,8 @@ export class MenuScene extends BaseScene {
           key: button.key,
           alt: button.alt,
           onClick: button.onClick,
-          width: isNarrowDisplay ? 170 : 140,
-          height: isNarrowDisplay ? 113 : 93,
+          width: isNarrowDisplay ? 210 : 198,
+          height: isNarrowDisplay ? 140 : 132,
           glowColor: 0x8beeff,
         }),
       );

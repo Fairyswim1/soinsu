@@ -1,5 +1,6 @@
 import { levels } from "../config/levels";
 import { PRIME_POP_SCREEN_ASSETS } from "../config/primePopAssets";
+import { gameFontFamily } from "../config/theme";
 import type { GameSession } from "../models/GameSession";
 import { FactorizationEngine } from "../systems/FactorizationEngine";
 import { SaveManager } from "../systems/SaveManager";
@@ -16,6 +17,11 @@ export class ResultScene extends BaseScene {
     const session = data.session;
     const stars = session.cleared ? ScoreSystem.stars(session.score, session.level.starThresholds) : 0;
     this.saveResult(session, stars);
+
+    if (session.mode === "classroom") {
+      this.drawClassroomResult(session);
+      return;
+    }
 
     if (session.cleared) {
       this.drawClearPopup(session, stars);
@@ -46,7 +52,7 @@ export class ResultScene extends BaseScene {
     const equations = this.completedEquations(session);
     this.add
       .text(640, 405, `점수 ${session.score}   ${"★".repeat(stars)}${"☆".repeat(3 - stars)}`, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "26px",
         color: "#ffd761",
         fontStyle: "bold",
@@ -56,14 +62,14 @@ export class ResultScene extends BaseScene {
       .setOrigin(0.5);
     this.add
       .text(640, 456, equations, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "18px",
         color: "#ffffff",
         align: "center",
         wordWrap: { width: 420 },
       })
       .setOrigin(0.5);
-    this.addHotspot(640, 560, 230, 76, () => this.goNext(session));
+    this.addHotspot(640, 550, 270, 86, () => this.goNext(session));
   }
 
   private drawRetryPopup(session: GameSession): void {
@@ -78,7 +84,7 @@ export class ResultScene extends BaseScene {
 
     this.add
       .text(640, 221, String(target), {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: target >= 100 ? "42px" : "50px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -89,7 +95,7 @@ export class ResultScene extends BaseScene {
       .setOrigin(0.5);
     this.add
       .text(640, 345, "다시 도전해 볼까요?", {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "34px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -99,7 +105,7 @@ export class ResultScene extends BaseScene {
       .setOrigin(0.5);
     this.add
       .text(640, 395, `완성한 목표 ${session.completedFactorizations.length}/${session.level.targets.length}  점수 ${session.score}`, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "22px",
         color: "#bff7ff",
         fontStyle: "bold",
@@ -108,8 +114,62 @@ export class ResultScene extends BaseScene {
       })
       .setOrigin(0.5);
 
-    this.addHotspot(540, 535, 210, 72, () => this.scene.start("GameScene", { mode: session.mode, level: session.level }));
-    this.addHotspot(746, 535, 238, 72, () => this.scene.start("LevelSelectScene"));
+    this.addHotspot(522, 494, 250, 86, () => this.scene.start("GameScene", { mode: session.mode, level: session.level }));
+    this.addHotspot(760, 494, 294, 86, () => this.scene.start("LevelSelectScene"));
+  }
+
+  private drawClassroomResult(session: GameSession): void {
+    const nextState = this.nextClassroomState(session);
+    this.addPanel(640, 420, 760, 420);
+    this.add
+      .text(640, 270, "교실 대결 결과", {
+        fontFamily: gameFontFamily,
+        fontSize: "46px",
+        color: "#fff4a8",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 7,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 370, `이번 점수 ${session.score}`, {
+        fontFamily: gameFontFamily,
+        fontSize: "42px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5);
+    this.add
+      .text(640, 470, `${nextState.teams[0]} ${nextState.scores[0]}점   ${nextState.teams[1]} ${nextState.scores[1]}점`, {
+        fontFamily: gameFontFamily,
+        fontSize: "32px",
+        color: "#dffbff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 5,
+      })
+      .setOrigin(0.5);
+    this.addButton(480, 620, "다음 팀 맵 선택", () => this.scene.start("LevelSelectScene", { mode: "classroom", classroomState: nextState }), 280);
+    this.addButton(780, 620, "타이틀", () => this.scene.start("MenuScene"), 220);
+  }
+
+  private nextClassroomState(session: GameSession): NonNullable<GameSession["classroomState"]> {
+    const current = session.classroomState ?? {
+      teams: ["A팀", "B팀"],
+      scores: [0, 0],
+      currentTeamIndex: 0,
+      round: 1,
+    };
+    const teams = current.teams.slice(0, 2);
+    const scores = teams.map((_, index) => current.scores[index] ?? 0);
+    return {
+      teams,
+      scores,
+      currentTeamIndex: current.currentTeamIndex,
+      round: current.round,
+    };
   }
 
   private addPopupImage(key: string, x: number, y: number, width: number, height: number): Phaser.GameObjects.Image {
@@ -120,8 +180,8 @@ export class ResultScene extends BaseScene {
     return image;
   }
 
-  private addHotspot(x: number, y: number, width: number, height: number, onClick: () => void): Phaser.GameObjects.Rectangle {
-    const hotspot = this.add.rectangle(x, y, width, height, 0xffffff, 0.001);
+  private addHotspot(x: number, y: number, width: number, height: number, onClick: () => void): Phaser.GameObjects.Zone {
+    const hotspot = this.add.zone(x, y, width, height).setDepth(100);
     hotspot.setInteractive({ useHandCursor: true });
     hotspot.on("pointerdown", () => {
       this.tweens.add({ targets: hotspot, scale: 0.96, duration: 70, yoyo: true });

@@ -18,6 +18,7 @@ export type ScoreBreakdown = {
 
 export type GameSession = {
   mode: GameMode;
+  classroomState?: ClassroomState;
   level: LevelConfig;
   targetIndex: number;
   originalTarget: number;
@@ -51,6 +52,13 @@ export type GameSession = {
   }>;
 };
 
+export type ClassroomState = {
+  teams: string[];
+  scores: number[];
+  currentTeamIndex: number;
+  round: number;
+};
+
 export function createEmptyBreakdown(): ScoreBreakdown {
   return {
     chain: 0,
@@ -66,10 +74,11 @@ export function createEmptyBreakdown(): ScoreBreakdown {
   };
 }
 
-export function createSession(mode: GameMode, level: LevelConfig): GameSession {
+export function createSession(mode: GameMode, level: LevelConfig, classroomState?: ClassroomState): GameSession {
   const originalTarget = level.targets[0] ?? 12;
   return {
     mode,
+    classroomState,
     level,
     targetIndex: 0,
     originalTarget,

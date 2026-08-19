@@ -5,12 +5,14 @@ import {
   PRIME_POP_BUTTON_ASSETS,
   PRIME_POP_EFFECT_ASSETS,
   PRIME_POP_GAMEPLAY_ASSETS,
+  PRIME_POP_WORLD_MAP_ASSETS,
   PRIME_TILE_ASSETS,
   primeTileKey,
 } from "../config/primePopAssets";
+import { gameFontFamily } from "../config/theme";
 import type { Blocker } from "../models/BlockerModel";
 import type { Board, Candy, Prime, SpecialCandy } from "../models/CandyModel";
-import { createSession, type GameMode, type GameSession } from "../models/GameSession";
+import { createSession, type ClassroomState, type GameMode, type GameSession } from "../models/GameSession";
 import type { LevelConfig } from "../models/LevelModel";
 import { AudioManager } from "../systems/AudioManager";
 import { BlockerSystem } from "../systems/BlockerSystem";
@@ -28,31 +30,43 @@ type GameSceneData = {
   mode?: GameMode;
   levelId?: number;
   level?: LevelConfig;
+  classroomState?: ClassroomState;
 };
 
 
 const LEVEL_DISPLAY_TITLES: Record<number, string> = {
   1: "\uCCAB \uC5F0\uACB0",
-  2: "5 \uB354\uD558\uAE30",
+  2: "5\uC758 \uB4F1\uC7A5",
   3: "\uAC19\uC740 \uC18C\uC218 \uBC18\uBCF5",
   4: "\uAE34 \uC5F0\uACB0 \uBCF4\uB108\uC2A4",
-  5: "\uC911\uAC04 \uBCF4\uC0C1\uB300",
-  6: "\uBD88\uC548\uC815\uD55C \uC18C\uC218",
-  7: "7\uC758 \uAD00\uBB38",
-  8: "\uD569\uC131\uC218 \uC5BC\uC74C",
+  5: "\uC81C\uD55C \uD130\uCE58",
+  6: "\uB113\uC5B4\uC9C4 \uC120\uD0DD\uC9C0",
+  7: "7\uC758 \uB4F1\uC7A5",
+  8: "\uD070 \uC218 \uBD84\uD574",
   9: "\uC5EC\uB7EC \uBAA9\uD45C \uC5F0\uC18D",
-  10: "\uD2B9\uC218 \uBB38\uC7A5 \uC2DC\uD5D8",
+  10: "\uCD5C\uC885 \uBD84\uD574",
 };
 
 const boardLayout = {
   centerX: 640,
-  centerY: 415,
-  frameWidth: 780,
-  frameHeight: 470,
-  trayWidth: 680,
-  trayHeight: 390,
-  trayPadding: 10,
-  gap: 8,
+  centerY: 525,
+  frameWidth: 1130,
+  frameHeight: 620,
+  trayWidth: 1040,
+  trayHeight: 570,
+  trayPaddingX: 38,
+  trayPaddingY: 24,
+  gapX: 8,
+  gapY: 8,
+};
+
+const GAMEPLAY_UI_CROPS = {
+  stageHeader: { x: 25, y: 311, width: 1485, height: 345 },
+  targetPanel: { x: 194, y: 223, width: 1147, height: 527 },
+  factorChain: { x: 16, y: 281, width: 1504, height: 438 },
+  hudBar: { x: 6, y: 444, width: 1241, height: 294 },
+  missionPanel: { x: 0, y: 485, width: 1254, height: 258 },
+  backToTitle: { x: 8, y: 384, width: 1239, height: 444 },
 };
 
 export class GameScene extends BaseScene {
@@ -79,9 +93,11 @@ export class GameScene extends BaseScene {
   private movesText!: Phaser.GameObjects.Text;
   private timeText!: Phaser.GameObjects.Text;
   private scoreText!: Phaser.GameObjects.Text;
+  private classroomTurnText?: Phaser.GameObjects.Text;
   private comboText!: Phaser.GameObjects.Text;
   private factorsText!: Phaser.GameObjects.Text;
-  private missionText!: Phaser.GameObjects.Text;
+  private missionIcons: Phaser.GameObjects.Text[] = [];
+  private missionTexts: Phaser.GameObjects.Text[] = [];
   private currentPointer?: { x: number; y: number };
   private displayedTarget?: number;
   private feedbackBanner?: Phaser.GameObjects.Container;
@@ -96,7 +112,8 @@ export class GameScene extends BaseScene {
     this.addBackground();
     const level = data.level ?? LevelManager.getLevel(data.levelId ?? 1);
     const mode = data.mode ?? "campaign";
-    this.session = createSession(mode, level);
+    this.session = createSession(mode, level, data.classroomState);
+    this.ensureClassroomState();
     this.generator = new BoardGenerator({
       availablePrimes: level.availablePrimes,
       seed: Date.now() % 100000,
@@ -141,10 +158,14 @@ export class GameScene extends BaseScene {
     backdrop.fillStyle(0x02061c, 0.24);
     backdrop.fillCircle(boardLayout.centerX, boardLayout.centerY + 12, 470);
 
-    this.add.image(640, 42, PRIME_POP_GAMEPLAY_ASSETS.stageHeaderPanel.key).setDisplaySize(360, 76).setAlpha(0.96);
+    this.addTitleReturnButton();
     this.add
-      .text(640, 28, `\uC2A4\uD14C\uC774\uC9C0 ${this.session.level.id}`, {
-        fontFamily: "Arial, sans-serif",
+      .image(640, 52, this.getCroppedTexture(PRIME_POP_GAMEPLAY_ASSETS.stageHeaderPanel.key, GAMEPLAY_UI_CROPS.stageHeader))
+      .setDisplaySize(390, 76)
+      .setAlpha(0.96);
+    this.add
+      .text(640, 36, `\uC2A4\uD14C\uC774\uC9C0 ${this.session.level.id}`, {
+        fontFamily: gameFontFamily,
         fontSize: "16px",
         color: "#bff7ff",
         fontStyle: "bold",
@@ -153,9 +174,9 @@ export class GameScene extends BaseScene {
       })
       .setOrigin(0.5);
     this.add
-      .text(640, 52, (LEVEL_DISPLAY_TITLES[this.session.level.id] ?? this.session.level.title), {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "23px",
+      .text(640, 64, (LEVEL_DISPLAY_TITLES[this.session.level.id] ?? this.session.level.title), {
+        fontFamily: gameFontFamily,
+        fontSize: "25px",
         color: "#ffffff",
         fontStyle: "bold",
         stroke: "#07123d",
@@ -163,14 +184,17 @@ export class GameScene extends BaseScene {
       })
       .setOrigin(0.5);
 
-    this.addImageButton(914, 43, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 86, 58);
-    this.addImageButton(1014, 43, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 86, 58);
-    this.addImageButton(1114, 43, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 86, 58);
+    this.addImageButton(922, 50, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 92, 61);
+    this.addImageButton(1022, 50, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 92, 61);
+    this.addImageButton(1122, 50, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 92, 61);
 
-    this.add.image(640, 112, PRIME_POP_BOARD_ASSETS.targetPanel.key).setDisplaySize(408, 104).setAlpha(0.98);
+    this.add
+      .image(640, 135, this.getCroppedTexture(PRIME_POP_BOARD_ASSETS.targetPanel.key, GAMEPLAY_UI_CROPS.targetPanel))
+      .setDisplaySize(312, 118)
+      .setAlpha(0.98);
     this.targetText = this.add
-      .text(640, 111, "", {
-        fontFamily: "Arial, sans-serif",
+      .text(640, 136, "", {
+        fontFamily: gameFontFamily,
         fontSize: "64px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -180,28 +204,35 @@ export class GameScene extends BaseScene {
       })
       .setOrigin(0.5);
 
-    this.add.image(640, 184, PRIME_POP_GAMEPLAY_ASSETS.factorChainPanel.key).setDisplaySize(552, 74).setAlpha(0.98);
+    this.add
+      .image(640, 212, this.getCroppedTexture(PRIME_POP_GAMEPLAY_ASSETS.factorChainPanel.key, GAMEPLAY_UI_CROPS.factorChain))
+      .setDisplaySize(440, 70)
+      .setAlpha(0.98)
+      .setDepth(12);
     this.equationText = this.add
-      .text(640, 184, "", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "30px",
+      .text(640, 210, "", {
+        fontFamily: gameFontFamily,
+        fontSize: "26px",
         color: "#eaffff",
         fontStyle: "bold",
         stroke: "#07123d",
         strokeThickness: 6,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(13);
     this.factorsText = this.add
-      .text(640, 208, "", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "13px",
-        color: "#ffe88c",
+      .text(640, 237, "", {
+        fontFamily: gameFontFamily,
+        fontSize: "14px",
+        color: "#fff4a8",
         fontStyle: "bold",
         stroke: "#07123d",
-        strokeThickness: 3,
+        strokeThickness: 2,
       })
       .setOrigin(0.5)
-      .setAlpha(0.86);
+      .setAlpha(1)
+      .setResolution(2)
+      .setDepth(13);
 
     this.add
       .image(boardLayout.centerX, boardLayout.centerY, PRIME_POP_BOARD_ASSETS.frame.key)
@@ -216,30 +247,101 @@ export class GameScene extends BaseScene {
     this.boardLayer = this.add.container(0, 0);
     this.blockerLayer = this.add.container(0, 0);
 
-    this.add.image(640, 650, PRIME_POP_GAMEPLAY_ASSETS.hudBar.key).setDisplaySize(612, 86).setAlpha(0.98);
-    this.movesText = this.addHudValue(448, 655, "\uC774\uB3D9", "#ffffff");
-    this.timeText = this.addHudValue(640, 655, "\uC2DC\uAC04", "#ffe88c");
-    this.scoreText = this.addHudValue(832, 655, "\uC810\uC218", "#ffffff");
+    this.add
+      .image(430, 830, this.getCroppedTexture(PRIME_POP_GAMEPLAY_ASSETS.hudBar.key, GAMEPLAY_UI_CROPS.hudBar))
+      .setDisplaySize(610, 112)
+      .setAlpha(0.98);
+    this.movesText = this.addHudValue(238, 834, "\uB0A8\uC740 \uD130\uCE58", "#ffffff");
+    this.timeText = this.addHudValue(430, 834, "\uC2DC\uAC04", "#ffe88c");
+    this.scoreText = this.addHudValue(622, 834, "\uC810\uC218", "#ffffff");
+    if (this.session.mode === "classroom") {
+      this.classroomTurnText = this.add
+        .text(640, 286, "", {
+          fontFamily: gameFontFamily,
+          fontSize: "27px",
+          color: "#fff4a8",
+          fontStyle: "bold",
+          stroke: "#07123d",
+          strokeThickness: 5,
+        })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setDepth(18);
+    }
 
-    this.add.image(1076, 648, PRIME_POP_GAMEPLAY_ASSETS.missionPanel.key).setDisplaySize(332, 112).setAlpha(0.96);
-    this.missionText = this.add
-      .text(946, 623, "", {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "14px",
-        color: "#e9fbff",
-        fontStyle: "bold",
-        lineSpacing: 5,
-        stroke: "#07123d",
-        strokeThickness: 3,
-        wordWrap: { width: 264 },
-      })
-      .setOrigin(0, 0);
+    this.add
+      .image(1010, 836, this.getCroppedTexture(PRIME_POP_GAMEPLAY_ASSETS.missionPanel.key, GAMEPLAY_UI_CROPS.missionPanel))
+      .setDisplaySize(460, 82)
+      .setAlpha(0.96);
+    this.missionIcons = [];
+    this.missionTexts = [];
+    [
+      { x: 850, labelOffset: 24 },
+      { x: 1010, labelOffset: 14 },
+      { x: 1170, labelOffset: 4 },
+    ].forEach(({ x: slotX, labelOffset }) => {
+      const icon = this.add
+        .text(slotX - 52, 836, "", {
+          fontFamily: gameFontFamily,
+          fontSize: "16px",
+          color: "#ffe88c",
+          fontStyle: "bold",
+          stroke: "#07123d",
+          strokeThickness: 2,
+        })
+        .setOrigin(0.5)
+        .setResolution(2);
+      const label = this.add
+        .text(slotX + labelOffset, 836, "", {
+          fontFamily: gameFontFamily,
+          fontSize: "13px",
+          color: "#ffffff",
+          fontStyle: "bold",
+          stroke: "#07123d",
+          strokeThickness: 2,
+          align: "center",
+          wordWrap: { width: 106, useAdvancedWrap: true },
+        })
+        .setOrigin(0.5)
+        .setResolution(2)
+        .setLineSpacing(0);
+      this.missionIcons.push(icon);
+      this.missionTexts.push(label);
+    });
 
     this.comboText = this.add.text(0, 0, "").setVisible(false);
 
     this.tweens.add({ targets: [this.targetText, this.equationText], alpha: { from: 0, to: 1 }, y: "+=0", duration: 220 });
     this.boardLayer.setAlpha(0);
     this.tweens.add({ targets: this.boardLayer, alpha: 1, y: "-=6", duration: 240, ease: "Sine.easeOut" });
+  }
+
+  private addTitleReturnButton(): void {
+    const x = 116;
+    const y = 50;
+    const key = this.getCroppedTexture(PRIME_POP_WORLD_MAP_ASSETS.backToTitle.key, GAMEPLAY_UI_CROPS.backToTitle);
+    const button = this.add.image(x, y, key).setDisplaySize(166, 60).setDepth(80);
+    const baseScaleX = button.scaleX;
+    const baseScaleY = button.scaleY;
+    const hitZone = this.add.zone(x, y, 184, 76).setDepth(81);
+    const setButtonScale = (scale: number, duration: number): void => {
+      this.tweens.killTweensOf(button);
+      this.tweens.add({
+        targets: button,
+        scaleX: baseScaleX * scale,
+        scaleY: baseScaleY * scale,
+        duration,
+        ease: "Sine.easeOut",
+      });
+    };
+
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.on("pointerover", () => setButtonScale(1.03, 150));
+    hitZone.on("pointerout", () => setButtonScale(1, 150));
+    hitZone.on("pointerdown", () => {
+      setButtonScale(0.96, 70);
+      this.scene.start("MenuScene");
+    });
   }
 
   private addImageButton(
@@ -266,24 +368,26 @@ export class GameScene extends BaseScene {
   private addHudValue(x: number, y: number, label: string, color: string): Phaser.GameObjects.Text {
     this.add
       .text(x, y - 18, label, {
-        fontFamily: "Arial, sans-serif",
-        fontSize: "14px",
-        color: "#aeefff",
+        fontFamily: gameFontFamily,
+        fontSize: "15px",
+        color: "#dffbff",
         fontStyle: "bold",
         stroke: "#07123d",
-        strokeThickness: 3,
+        strokeThickness: 2,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setResolution(2);
     return this.add
       .text(x, y + 10, "", {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "29px",
         color,
         fontStyle: "bold",
         stroke: "#07123d",
         strokeThickness: 6,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setResolution(2);
   }
 
   private pulseText(text: Phaser.GameObjects.Text): void {
@@ -295,15 +399,17 @@ export class GameScene extends BaseScene {
     this.candyObjects.clear();
     const rows = gameConfig.board.rows;
     const columns = gameConfig.board.columns;
-    const maxTileByWidth = Math.floor((boardLayout.trayWidth - boardLayout.trayPadding * 2) / (columns + (columns - 1) * 0.2));
-    const maxTileByHeight = Math.floor((boardLayout.trayHeight - boardLayout.trayPadding * 2) / (rows + (rows - 1) * 0.2));
-    this.cellSize = Math.min(64, maxTileByWidth, maxTileByHeight);
-    const gap = Math.max(8, Math.round(this.cellSize * 0.18));
-    boardLayout.gap = gap;
-    const gridWidth = this.cellSize * columns + gap * (columns - 1);
-    const gridHeight = this.cellSize * rows + gap * (rows - 1);
+    const maxTileByWidth = Math.floor((boardLayout.trayWidth - boardLayout.trayPaddingX * 2) / (columns + (columns - 1) * 0.2));
+    const maxTileByHeight = Math.floor((boardLayout.trayHeight - boardLayout.trayPaddingY * 2) / (rows + (rows - 1) * 0.2));
+    this.cellSize = Math.min(74, maxTileByWidth, maxTileByHeight);
+    const gapX = Math.max(8, Math.round(this.cellSize * 0.18));
+    const gapY = Math.max(3, Math.round(this.cellSize * 0.045));
+    boardLayout.gapX = gapX;
+    boardLayout.gapY = gapY;
+    const gridWidth = this.cellSize * columns + gapX * (columns - 1);
+    const gridHeight = this.cellSize * rows + gapY * (rows - 1);
     this.boardX = Math.round(boardLayout.centerX - gridWidth / 2);
-    this.boardY = Math.round(boardLayout.centerY + 4 - gridHeight / 2);
+    this.boardY = Math.round(boardLayout.centerY + 12 - gridHeight / 2);
 
     for (const row of this.board) {
       for (const candy of row) {
@@ -335,7 +441,7 @@ export class GameScene extends BaseScene {
           children.push(
             this.add
               .text(0, 1, String(candy.prime), {
-                fontFamily: "Arial, sans-serif",
+                fontFamily: gameFontFamily,
                 fontSize: `${Math.floor(this.cellSize * 0.42)}px`,
                 color: "#ffffff",
                 fontStyle: "bold",
@@ -348,7 +454,7 @@ export class GameScene extends BaseScene {
         const special = candy.special
           ? this.add
               .text(0, -this.cellSize * 0.34, candy.special === "exponentBomb" ? "\uC9C0\uC218" : "\uB85C\uCF13", {
-                fontFamily: "Arial, sans-serif",
+                fontFamily: gameFontFamily,
                 fontSize: "15px",
                 color: "#fff6a8",
                 stroke: "#162044",
@@ -386,32 +492,56 @@ export class GameScene extends BaseScene {
     this.blockerLayer.removeAll(true);
     for (const blocker of this.blockers) {
       const { x, y } = this.cellCenter(blocker.row, blocker.col);
-      const box = this.add
-        .rectangle(
-          x,
-          y,
-          this.cellSize * 0.82,
-          this.cellSize * 0.82,
-          blocker.type === "compositeIce" ? 0xb9f2ff : 0x7654c9,
-          0.54,
-        )
-        .setStrokeStyle(3, 0xffffff, 0.72);
-      const label =
-        blocker.type === "compositeIce"
-          ? `${blocker.current}`
-          : Object.entries(blocker.required)
-              .map(([prime, count]) => `${prime}:${(blocker.used[Number(prime) as Prime] ?? 0)}/${count}`)
-              .join(" ");
-      const text = this.add
-        .text(x, y, label, {
-          fontFamily: "Arial, sans-serif",
-          fontSize: "16px",
-          color: "#ffffff",
-          stroke: "#1a2354",
-          strokeThickness: 4,
-        })
-        .setOrigin(0.5);
-      this.blockerLayer.add([box, text]);
+      const container = this.add.container(x, y);
+      const size = this.cellSize * 0.82;
+      const plate = this.add
+        .rectangle(0, 0, size, size, blocker.type === "compositeIce" ? 0x9defff : 0x231a63, blocker.type === "compositeIce" ? 0.72 : 0.82)
+        .setStrokeStyle(3, blocker.type === "compositeIce" ? 0xffffff : 0xffd761, 0.9);
+
+      if (blocker.type === "compositeIce") {
+        const frost = this.add.rectangle(0, 0, size * 0.72, size * 0.72, 0xeaffff, 0.26).setStrokeStyle(2, 0x75ecff, 0.8);
+        const text = this.add
+          .text(0, 1, String(blocker.current), {
+            fontFamily: gameFontFamily,
+            fontSize: "18px",
+            color: "#ffffff",
+            fontStyle: "bold",
+            stroke: "#194c78",
+            strokeThickness: 5,
+          })
+          .setOrigin(0.5);
+        container.add([plate, frost, text]);
+      } else {
+        const requiredEntries = Object.entries(blocker.required);
+        const requiredTotal = requiredEntries.reduce((sum, [, count]) => sum + (count ?? 0), 0);
+        const usedTotal = requiredEntries.reduce((sum, [prime]) => sum + (blocker.used[Number(prime) as Prime] ?? 0), 0);
+        const requiredLabel = requiredEntries
+          .flatMap(([prime, count]) => Array.from({ length: count ?? 0 }, () => prime))
+          .join("·");
+        const lock = this.add.image(0, -5, PRIME_POP_WORLD_MAP_ASSETS.lockIcon.key).setDisplaySize(size * 0.54, size * 0.54).setAlpha(0.96);
+        const progress = this.add
+          .text(0, size * 0.23, `${usedTotal}/${requiredTotal}`, {
+            fontFamily: gameFontFamily,
+            fontSize: "13px",
+            color: "#ffffff",
+            fontStyle: "bold",
+            stroke: "#07123d",
+            strokeThickness: 4,
+          })
+          .setOrigin(0.5);
+        const required = this.add
+          .text(0, -size * 0.36, requiredLabel, {
+            fontFamily: gameFontFamily,
+            fontSize: "10px",
+            color: "#ffe88c",
+            fontStyle: "bold",
+            stroke: "#07123d",
+            strokeThickness: 3,
+          })
+          .setOrigin(0.5);
+        container.add([plate, lock, progress, required]);
+      }
+      this.blockerLayer.add(container);
     }
   }
 
@@ -462,7 +592,9 @@ export class GameScene extends BaseScene {
       this.shakeCandy(candy.id);
       this.session.invalidSelections += 1;
       this.breakCombo();
-      this.showRetryFeedback(state.invalidMessage || "\uB2E4\uC2DC \uC120\uD0DD!");
+      if (!this.isDivisibilityHint(state.invalidMessage)) {
+        this.showRetryFeedback(state.invalidMessage || "\uB2E4\uC2DC \uC120\uD0DD!");
+      }
     }
     this.drawPath(state.candies);
     this.previewSelection(state);
@@ -489,7 +621,16 @@ export class GameScene extends BaseScene {
     const cell = this.pointerToCell(pointer.x, pointer.y);
     if (!cell) return;
     const candy = this.board[cell.row]?.[cell.col] ?? null;
-    if (candy) this.beginDrag(candy);
+    if (!candy) return;
+    if (!FactorizationEngine.canDivide(this.session.currentRemainder, candy.prime) && this.canHitAdjacentBlocker(candy)) {
+      this.commitObstacleOnlySelection(candy);
+      return;
+    }
+    if (this.session.mode === "classroom" && !FactorizationEngine.canDivide(this.session.currentRemainder, candy.prime)) {
+      this.commitInvalidClassroomClick(candy);
+      return;
+    }
+    this.beginDrag(candy);
   }
 
   private endDrag(): void {
@@ -511,17 +652,24 @@ export class GameScene extends BaseScene {
     const result = FactorizationEngine.applyFactors(this.session.currentRemainder, factors);
     if (!result.ok) {
       this.breakCombo();
-      this.showRetryFeedback(result.message || "\uB2E4\uC2DC \uC120\uD0DD!");
+      if (!this.isDivisibilityHint(result.message)) {
+        this.showRetryFeedback(result.message || "\uB2E4\uC2DC \uC120\uD0DD!");
+      }
       this.audio.play("invalid");
       this.session.invalidSelections += 1;
-      if (this.session.level.wrongDragPenalty) this.session.movesLeft -= 1;
+      if (this.session.mode === "classroom" || this.session.level.wrongDragPenalty) this.session.movesLeft = Math.max(0, this.session.movesLeft - 1);
+      this.advanceClassroomTurn();
+      if (this.session.movesLeft <= 0) {
+        this.finishGame();
+        return;
+      }
       this.updateHud();
       return;
     }
     this.inputLocked = true;
     const score = ScoreSystem.scoreSelection(this.session, factors, result.completed);
     this.applyScore(score);
-    this.session.combo += 1;
+    if (this.session.mode !== "classroom") this.session.combo += 1;
     this.session.currentTargetDragCount += 1;
     for (const factor of factors) {
       this.session.collectedPrimes[factor] = (this.session.collectedPrimes[factor] ?? 0) + 1;
@@ -562,7 +710,7 @@ export class GameScene extends BaseScene {
     const specialScore = ScoreSystem.scoreSpecialClears(uniqueExtras.length);
     this.applyScore(specialScore);
 
-    const totalGained = score.gained + obstacleScore.gained + specialScore.gained;
+    const totalGained = this.visibleScoreGain(score) + this.visibleScoreGain(obstacleScore) + this.visibleScoreGain(specialScore);
     const labels = [...score.labels, ...obstacleScore.labels, ...specialScore.labels];
     if (specialAward.label) labels.push(specialAward.label);
     if (blockerMessages[0]) labels.push(blockerMessages[0]);
@@ -582,19 +730,136 @@ export class GameScene extends BaseScene {
       if (this.session.timeLeftSeconds <= 0) {
         this.timeUp();
       } else if (result.completed) {
+        this.advanceClassroomTurn();
         this.advanceTargetOrFinish();
       } else if (this.session.movesLeft <= 0) {
+        this.advanceClassroomTurn();
         this.finishGame();
       } else {
+        this.advanceClassroomTurn();
         this.inputLocked = false;
-        this.updateHud(result.steps);
+        this.updateHud();
       }
     });
   }
 
-  private applyScore(result: ReturnType<typeof ScoreSystem.scoreSelection>): void {
-    this.session.score += result.gained;
+  private canHitAdjacentBlocker(candy: Candy): boolean {
+    return this.blockers.some((blocker) => {
+      const distance = Math.abs(blocker.row - candy.row) + Math.abs(blocker.col - candy.col);
+      if (distance > 1) return false;
+      if (blocker.type === "compositeIce") return FactorizationEngine.canDivide(blocker.current, candy.prime);
+      const need = blocker.required[candy.prime] ?? 0;
+      const used = blocker.used[candy.prime] ?? 0;
+      return used < need;
+    });
+  }
+
+  private commitObstacleOnlySelection(candy: Candy): void {
+    this.inputLocked = true;
+    this.isDragging = false;
+    this.selection.clear();
+    this.pathLayer.clear();
+    this.lastPointerCellKey = undefined;
+    this.currentPointer = undefined;
+
+    const hit = BlockerSystem.hitAdjacent(this.blockers, candy.row, candy.col, candy.prime);
+    const obstacleScore = ScoreSystem.scoreObstacleHits(hit.damaged.length, hit.cleared.length);
+    this.applyScore(obstacleScore);
+    this.session.movesLeft -= 1;
+    this.session.collectedPrimes[candy.prime] = (this.session.collectedPrimes[candy.prime] ?? 0) + 1;
+
+    this.blockers = this.blockers.filter((blocker) => {
+      if (blocker.type === "compositeIce") return blocker.current > 1;
+      return !Object.entries(blocker.required).every(([key, count]) => {
+        const prime = Number(key) as Prime;
+        return (blocker.used[prime] ?? 0) >= (count ?? 0);
+      });
+    });
+
+    const labels = [...obstacleScore.labels, ...hit.messages];
+    const obstacleGained = this.visibleScoreGain(obstacleScore);
+    this.factorsText.setText(`${labels.join("  ")}  +${obstacleGained}`);
+    this.floatScore([candy], obstacleGained, 1);
+    this.popCandies([candy], () => {
+      this.generator.remove(this.board, [candy.id]);
+      this.generator.refill(this.board, this.session.currentRemainder);
+      this.selection = new SelectionSystem(this.board);
+      this.drawBoard();
+      this.drawBlockers();
+      if (this.session.movesLeft <= 0) {
+        this.advanceClassroomTurn();
+        this.finishGame();
+        return;
+      }
+      this.advanceClassroomTurn();
+      this.inputLocked = false;
+      this.updateHud();
+    });
+  }
+
+  private commitInvalidClassroomClick(candy: Candy): void {
+    this.inputLocked = true;
+    this.isDragging = false;
+    this.selection.clear();
+    this.pathLayer.clear();
+    this.lastPointerCellKey = undefined;
+    this.currentPointer = undefined;
+    this.session.invalidSelections += 1;
+    this.session.movesLeft = Math.max(0, this.session.movesLeft - 1);
+    this.breakCombo();
+    this.audio.play("invalid");
+    this.shakeCandy(candy.id);
+
+    this.time.delayedCall(420, () => {
+      if (this.session.movesLeft <= 0) {
+        this.advanceClassroomTurn();
+        this.finishGame();
+        return;
+      }
+      this.advanceClassroomTurn();
+      this.inputLocked = false;
+      this.updateHud();
+    });
+  }
+
+  private applyScore(result: ReturnType<typeof ScoreSystem.scoreSelection>, awardToClassroomTeam = true): void {
+    const gained = this.visibleScoreGain(result);
+    this.session.score += gained;
+    if (awardToClassroomTeam && result.gained > 0 && this.session.mode === "classroom" && this.session.classroomState) {
+      const teamIndex = this.session.classroomState.currentTeamIndex;
+      this.session.classroomState.scores[teamIndex] = (this.session.classroomState.scores[teamIndex] ?? 0) + gained;
+    }
     ScoreSystem.mergeBreakdown(this.session.scoreBreakdown, result.parts);
+  }
+
+  private visibleScoreGain(result: ReturnType<typeof ScoreSystem.scoreSelection>): number {
+    if (this.session.mode !== "classroom") return result.gained;
+    const parts = result.parts;
+    return parts.chain + parts.exponent + parts.longChain + parts.perfect + parts.obstacle + parts.special;
+  }
+
+  private ensureClassroomState(): void {
+    if (this.session.mode !== "classroom") return;
+    const state = this.session.classroomState ?? {
+      teams: ["A팀", "B팀"],
+      scores: [0, 0],
+      currentTeamIndex: 0,
+      round: 1,
+    };
+    const teams = state.teams.length >= 2 ? state.teams.slice(0, 2) : ["A팀", "B팀"];
+    this.session.classroomState = {
+      teams,
+      scores: teams.map((_, index) => Math.max(0, state.scores[index] ?? 0)),
+      currentTeamIndex: Math.max(0, Math.min(teams.length - 1, state.currentTeamIndex)),
+      round: Math.max(1, state.round),
+    };
+  }
+
+  private advanceClassroomTurn(): void {
+    const state = this.session.classroomState;
+    if (this.session.mode !== "classroom" || !state) return;
+    state.currentTeamIndex = (state.currentTeamIndex + 1) % state.teams.length;
+    if (state.currentTeamIndex === 0) state.round += 1;
   }
 
   private breakCombo(): void {
@@ -765,15 +1030,11 @@ export class GameScene extends BaseScene {
     const all = [...this.session.selectedFactors, ...state.factors];
     const expression = all.length > 0 ? all.join(" \u00D7 ") : "\uC120\uD0DD \uB300\uAE30";
     this.equationText.setText(expression);
-    this.factorsText.setText(
-      all.length > 0
-        ? `\uD604\uC7AC \uACF1: ${this.session.originalTarget / Math.max(1, state.previewRemainder)}  \u00B7  \uB0A8\uC740 \uAC12: ${state.previewRemainder}`
-        : "",
-    );
+    this.factorsText.setText(all.length > 0 ? all.join(" \u00D7 ") : "");
     if (state.factors.length > 0) this.popFactorChain();
   }
 
-  private updateHud(steps?: readonly number[]): void {
+  private updateHud(): void {
     const previousMoves = this.movesText.text;
     const previousTime = this.timeText.text;
     const previousScore = this.scoreText.text;
@@ -788,16 +1049,26 @@ export class GameScene extends BaseScene {
     this.timeText.setText(this.formatTime(this.session.timeLeftSeconds));
     this.timeText.setColor(this.session.timeLeftSeconds <= 15 ? "#ff6c83" : "#ffe88c");
     this.scoreText.setText(String(this.session.score));
+    this.updateClassroomTurnText();
     if (previousMoves && previousMoves !== this.movesText.text) this.pulseText(this.movesText);
     if (previousTime && previousTime !== this.timeText.text) this.pulseText(this.timeText);
     if (previousScore && previousScore !== this.scoreText.text) this.pulseText(this.scoreText);
 
     this.comboText.setText(`\uC5F0\uC18D ${this.session.combo}`);
-    this.missionText.setText(this.formatMissionProgress());
+    this.updateMissionSlots();
     const selected = this.session.selectedFactors;
-    const remainder = (steps ?? [this.session.currentRemainder]).at(-1) ?? this.session.currentRemainder;
-    this.factorsText.setText(selected.length > 0 ? `\uB0A8\uC740 \uAC12: ${remainder}` : "");
+    this.factorsText.setText(
+      selected.length > 0 ? selected.join(" \u00D7 ") : "\uD55C \uBC88\uC5D0 \uAE38\uAC8C \uC5F0\uACB0\uD560\uC218\uB85D \uBCF4\uB108\uC2A4",
+    );
     this.equationText.setText(selected.length > 0 ? selected.join(" \u00D7 ") : "\uC120\uD0DD \uB300\uAE30");
+  }
+
+  private updateClassroomTurnText(): void {
+    const state = this.session.classroomState;
+    if (!this.classroomTurnText || this.session.mode !== "classroom" || !state) return;
+    this.classroomTurnText.setText(
+      `${state.teams[state.currentTeamIndex]} 차례   ${state.teams[0]} ${state.scores[0]} : ${state.teams[1]} ${state.scores[1]}`,
+    );
   }
 
   private showResultFeedback(key: string, message: string, retry = false): void {
@@ -806,7 +1077,7 @@ export class GameScene extends BaseScene {
     const banner = this.add.image(0, 0, key).setDisplaySize(390, 150).setAlpha(0.98);
     const text = this.add
       .text(0, 2, message, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "34px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -833,6 +1104,10 @@ export class GameScene extends BaseScene {
     this.showResultFeedback(PRIME_POP_GAMEPLAY_ASSETS.feedbackRetry.key, message, true);
   }
 
+  private isDivisibilityHint(message?: string): boolean {
+    return Boolean(message && message.includes("\uD604\uC7AC \uC218") && message.includes("\uB098\uB20C \uC218 \uC5C6\uC5B4\uC694"));
+  }
+
   private popFactorChain(): void {
     this.tweens.killTweensOf(this.equationText);
     this.equationText.setScale(0.86);
@@ -840,13 +1115,14 @@ export class GameScene extends BaseScene {
   }
 
   private showStreakBadge(): void {
+    if (this.session.mode === "classroom") return;
     if (this.session.combo < 2) return;
     this.streakBadge?.destroy();
     const container = this.add.container(902, 214).setDepth(88).setAlpha(0).setScale(0.7);
     const badge = this.add.image(0, 0, PRIME_POP_GAMEPLAY_ASSETS.streakBadge.key).setDisplaySize(190, 86).setAlpha(0.98);
     const text = this.add
       .text(0, 0, `\uC5F0\uC18D \uC131\uACF5 ${this.session.combo}\uD68C!`, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: "22px",
         color: "#ffffff",
         fontStyle: "bold",
@@ -868,26 +1144,40 @@ export class GameScene extends BaseScene {
     return `${minutes}:${String(rest).padStart(2, "0")}`;
   }
 
-  private formatMissionProgress(): string {
+  private updateMissionSlots(): void {
+    const lines = this.formatMissionProgress();
+    this.missionTexts.forEach((text, index) => {
+      const line = lines[index] ?? "";
+      const complete = line.startsWith("✓");
+      const marker = line ? (complete ? "✓" : "•") : "";
+      this.missionIcons[index]?.setText(marker);
+      this.missionIcons[index]?.setColor(complete ? "#9dffcf" : "#ffe88c");
+      text.setText(line.replace(/^[✓•]\s*/, ""));
+      text.setAlpha(line ? 1 : 0);
+      this.missionIcons[index]?.setAlpha(line ? 1 : 0);
+    });
+  }
+
+  private formatMissionProgress(): string[] {
     const objectives = this.session.level.objectives;
     const lines: string[] = [];
     if (objectives.maxDragsPerTarget) {
       const done = this.session.targetsCompletedWithinDragGoal;
       const total = this.session.level.targets.length;
-      lines.push(`${done >= total ? "\u2713" : "\u2022"} ${objectives.maxDragsPerTarget}\uB4DC\uB798\uADF8 \uC774\uB0B4 ${done}/${total}`);
+      lines.push(`${done >= total ? "\u2713" : "\u2022"} \uBAA9\uD45C\uB2F9 ${objectives.maxDragsPerTarget}\uBC88 \uC774\uD558\n${done}/${total}`);
     }
     if (objectives.minLongChains) {
       const done = this.session.longChainsCompleted;
       const total = objectives.minLongChains;
-      lines.push(`${done >= total ? "\u2713" : "\u2022"} ${objectives.longChainLength ?? 4}+ \uC5F0\uACB0 ${done}/${total}`);
+      lines.push(`${done >= total ? "\u2713" : "\u2022"} ${objectives.longChainLength ?? 4}\uAC1C \uC774\uC0C1 \uC5F0\uACB0\n${done}/${total}`);
     }
     if (objectives.collectPrimes) {
       for (const [prime, required] of Object.entries(objectives.collectPrimes).slice(0, Math.max(1, 3 - lines.length))) {
         const done = this.session.collectedPrimes[Number(prime) as Prime] ?? 0;
-        lines.push(`${done >= (required ?? 0) ? "\u2713" : "\u2022"} ${prime} \uC218\uC9D1 ${done}/${required}`);
+        lines.push(`${done >= (required ?? 0) ? "\u2713" : "\u2022"} ${prime} \uBCF4\uC11D \uBAA8\uC73C\uAE30\n${done}/${required}`);
       }
     }
-    return lines.length > 0 ? lines.slice(0, 3).join("\n") : "\u2022 \uBAA9\uD45C \uC22B\uC790\uB97C \uBD84\uD574";
+    return lines.length > 0 ? lines.slice(0, 3) : ["\u2022 \uBAA9\uD45C \uC22B\uC790 \uBD84\uD574"];
   }
   private finishGame(): void {
     this.session.endedAtMs = Date.now();
@@ -896,7 +1186,7 @@ export class GameScene extends BaseScene {
     this.session.cleared = targetsComplete && objectivesComplete;
     if (this.session.cleared && !this.session.objectiveBonusAwarded && objectivesComplete) {
       const objectiveScore = ScoreSystem.scoreObjectiveBonus();
-      this.applyScore(objectiveScore);
+      this.applyScore(objectiveScore, false);
       this.session.objectiveBonusAwarded = true;
     }
     this.logDevSummary();
@@ -994,7 +1284,7 @@ export class GameScene extends BaseScene {
     const { x, y } = this.cellCenter(anchor.row, anchor.col);
     const text = this.add
       .text(x, y - 24, `+${gained}`, {
-        fontFamily: "Arial, sans-serif",
+        fontFamily: gameFontFamily,
         fontSize: `${Math.min(34, 18 + chainLength * 3)}px`,
         color: "#fff6a8",
         stroke: "#17204a",
@@ -1069,22 +1359,23 @@ export class GameScene extends BaseScene {
 
   private cellCenter(row: number, col: number): { x: number; y: number } {
     return {
-      x: this.boardX + this.cellSize / 2 + col * (this.cellSize + boardLayout.gap),
-      y: this.boardY + this.cellSize / 2 + row * (this.cellSize + boardLayout.gap),
+      x: this.boardX + this.cellSize / 2 + col * (this.cellSize + boardLayout.gapX),
+      y: this.boardY + this.cellSize / 2 + row * (this.cellSize + boardLayout.gapY),
     };
   }
 
   private pointerToCell(x: number, y: number): { row: number; col: number } | undefined {
     const localX = x - this.boardX;
     const localY = y - this.boardY;
-    const pitch = this.cellSize + boardLayout.gap;
-    const col = Math.round((localX - this.cellSize / 2) / pitch);
-    const row = Math.round((localY - this.cellSize / 2) / pitch);
+    const pitchX = this.cellSize + boardLayout.gapX;
+    const pitchY = this.cellSize + boardLayout.gapY;
+    const col = Math.round((localX - this.cellSize / 2) / pitchX);
+    const row = Math.round((localY - this.cellSize / 2) / pitchY);
     if (row < 0 || row >= gameConfig.board.rows || col < 0 || col >= gameConfig.board.columns) {
       return undefined;
     }
-    const centerX = this.cellSize / 2 + col * pitch;
-    const centerY = this.cellSize / 2 + row * pitch;
+    const centerX = this.cellSize / 2 + col * pitchX;
+    const centerY = this.cellSize / 2 + row * pitchY;
     const distance = Math.hypot(localX - centerX, localY - centerY);
     if (distance > this.cellSize * 0.68) {
       return undefined;

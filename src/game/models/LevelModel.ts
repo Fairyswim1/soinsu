@@ -13,10 +13,17 @@ export type BoardTuning = {
   adjacentValidSuppression?: number;
 };
 
+export type TargetRules = {
+  targetCount: number;
+  factorCountRange: [number, number];
+  digitRange: [number, number];
+};
+
 export type LevelConfig = {
   id: number;
   title: string;
   targets: number[];
+  targetRules?: TargetRules;
   moves: number;
   timeLimitSeconds: number;
   availablePrimes: Prime[];

@@ -1,7 +1,6 @@
 import { scoringConfig } from "../config/scoring";
 import type { Prime } from "../models/CandyModel";
 import type { GameSession, ScoreBreakdown } from "../models/GameSession";
-import { FactorizationEngine } from "./FactorizationEngine";
 
 export type ScoreResult = {
   gained: number;
@@ -28,40 +27,22 @@ export class ScoreSystem {
   static scoreSelection(session: GameSession, factors: readonly Prime[], completed: boolean): ScoreResult {
     const labels: string[] = factors.length === 1 && !completed ? ["짧은 연결"] : ["소수 연결"];
     const parts = this.emptyBreakdown();
-    parts.chain =
-      scoringConfig.chainScores[Math.min(factors.length, scoringConfig.chainScores.length - 1)] ??
-      factors.reduce<number>((sum, _factor, index) => sum + scoringConfig.baseCandy + index * scoringConfig.chainStep, 0);
+    parts.chain = factors.length * scoringConfig.gemScore;
 
-    const counts = FactorizationEngine.normalizeFactors(factors);
-    if (Object.values(counts).some((count) => (count ?? 0) >= 2)) {
-      parts.exponent = scoringConfig.exponentBonus;
-      labels.push("지수 보너스");
-    }
     if (factors.length >= 4) {
-      parts.longChain = scoringConfig.longChainBonus;
+      parts.longChain = (factors.length - 3) * scoringConfig.longChainExtraPerGem;
       labels.push("긴 연결 보너스");
     }
     if (completed) {
       labels.push("분해 성공!");
+      parts.exponent = scoringConfig.targetCompleteBonus;
       if (session.currentRemainder === session.originalTarget) {
-        parts.perfect = scoringConfig.perfectFactor;
+        parts.perfect = scoringConfig.oneDragCompleteBonus;
         labels.push("한 번에 완성!");
       }
-      if (session.hintsUsed === 0) {
-        parts.noHint = scoringConfig.noHint;
-        labels.push("힌트 미사용");
-      }
-      parts.resources =
-        session.movesLeft * scoringConfig.moveBonus + session.timeLeftSeconds * scoringConfig.timeBonusPerSecond;
     }
 
-    const baseScore =
-      parts.chain + parts.exponent + parts.longChain + parts.perfect + parts.noHint + parts.resources;
-    parts.comboBonus = session.combo > 0 ? session.combo * scoringConfig.streakBonus : 0;
-    if (parts.comboBonus > 0) {
-      labels.push(`연속 성공 ${session.combo + 1}`);
-    }
-    const gained = baseScore + parts.comboBonus;
+    const gained = parts.chain + parts.exponent + parts.longChain + parts.perfect;
     return { gained, labels, parts };
   }
 
@@ -69,7 +50,7 @@ export class ScoreSystem {
     const parts = this.emptyBreakdown();
     parts.obstacle = damagedCount * scoringConfig.obstacleDamage + clearedCount * scoringConfig.obstacleClear;
     const labels = parts.obstacle > 0 ? ["장애물 타격"] : [];
-    if (clearedCount > 0) labels.push("합성수 얼음 제거!");
+    if (parts.obstacle > 0 && clearedCount > 0) labels.push("장애물 제거!");
     return { gained: parts.obstacle, labels, parts };
   }
 
@@ -78,7 +59,7 @@ export class ScoreSystem {
     parts.special = count * scoringConfig.specialClear;
     return {
       gained: parts.special,
-      labels: count > 0 ? ["특수 타일 정리(소인수 미포함)"] : [],
+      labels: parts.special > 0 ? ["특수 타일 정리"] : [],
       parts,
     };
   }
@@ -104,16 +85,13 @@ export class ScoreSystem {
 
   static formatBreakdown(parts: ScoreBreakdown): string[] {
     const rows: Array<[string, number]> = [
-      ["연결", parts.chain],
-      ["지수", parts.exponent],
+      ["보석", parts.chain],
+      ["목표 완성", parts.exponent],
       ["긴 연결", parts.longChain],
       ["한 번 완성", parts.perfect],
-      ["힌트 미사용", parts.noHint],
-      ["남은 이동/시간", parts.resources],
       ["장애물", parts.obstacle],
       ["특수 타일", parts.special],
       ["미션", parts.objective],
-      ["연속 성공", parts.comboBonus],
     ];
     return rows.filter(([, value]) => value !== 0).map(([label, value]) => `${label}: ${value}`);
   }

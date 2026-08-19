@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Jua&display=swap");
+
 html,
 body,
 #app,
@@ -9,6 +11,11 @@ body,
   background: #161a3d;
   color: #fff;
   font-family:
+    "Jua",
+    "ONE Mobile POP",
+    "ONE Mobile Title",
+    "CookieRun",
+    "BM JUA_TTF",
     "Pretendard",
     "Noto Sans KR",
     "Apple SD Gothic Neo",

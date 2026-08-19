@@ -1,5 +1,19 @@
 import type { Prime } from "../models/CandyModel";
 
+const GAME_FONT_NAME = "Jua";
+
+export const gameFontFamily = `"${GAME_FONT_NAME}", "ONE Mobile POP", "ONE Mobile Title", "CookieRun", "BM JUA_TTF", "Noto Sans KR", "Malgun Gothic", sans-serif`;
+
+export async function loadGameFonts(): Promise<void> {
+  if (!("fonts" in document)) return;
+  await Promise.race([
+    document.fonts.load(`400 32px "${GAME_FONT_NAME}"`),
+    new Promise((resolve) => {
+      window.setTimeout(resolve, 1200);
+    }),
+  ]);
+}
+
 export type PrimeTheme = {
   color: number;
   dark: number;

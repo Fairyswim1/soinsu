@@ -40,6 +40,7 @@ export class BoardGenerator {
         board[row]![col] = this.createCandy(row, col, this.pickPrimeForCell(board, row, col, remainder));
       }
     }
+    this.ensureFactorChain(board, remainder);
     this.ensureValidMove(board, remainder);
     return board;
   }
@@ -58,6 +59,7 @@ export class BoardGenerator {
         board[row]![col] = candy;
       }
     }
+    this.ensureFactorChain(board, remainder);
     this.ensureValidMove(board, remainder);
     return board;
   }
@@ -80,6 +82,34 @@ export class BoardGenerator {
     );
   }
 
+  hasFactorChain(board: Board, remainder: number): boolean {
+    const factors = this.expandedFactorsFor(remainder);
+    if (factors.length === 0) return false;
+
+    const visit = (row: number, col: number, index: number, visited: Set<string>): boolean => {
+      const cell = board[row]?.[col] ?? null;
+      if (!cell || cell.prime !== factors[index]) return false;
+      if (index === factors.length - 1) return true;
+      visited.add(cell.id);
+      for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+        for (let colOffset = -1; colOffset <= 1; colOffset += 1) {
+          if (rowOffset === 0 && colOffset === 0) continue;
+          const next = board[row + rowOffset]?.[col + colOffset] ?? null;
+          if (!next || visited.has(next.id)) continue;
+          if (visit(row + rowOffset, col + colOffset, index + 1, new Set(visited))) return true;
+        }
+      }
+      return false;
+    };
+
+    for (let row = 0; row < this.rows; row += 1) {
+      for (let col = 0; col < this.columns; col += 1) {
+        if (visit(row, col, 0, new Set())) return true;
+      }
+    }
+    return false;
+  }
+
   ensureValidMove(board: Board, remainder: number): void {
     if (this.hasValidMove(board, remainder)) {
       return;
@@ -100,6 +130,45 @@ export class BoardGenerator {
       row,
       col,
     };
+  }
+
+  private ensureFactorChain(board: Board, remainder: number): void {
+    const factors = this.expandedFactorsFor(remainder);
+    if (factors.length === 0 || factors.length > this.rows * this.columns || this.hasFactorChain(board, remainder)) return;
+
+    const coordinates = this.chainCoordinates(factors.length);
+    factors.forEach((factor, index) => {
+      const coordinate = coordinates[index];
+      if (!coordinate) return;
+      board[coordinate.row]![coordinate.col] = this.createCandy(coordinate.row, coordinate.col, factor);
+    });
+  }
+
+  private expandedFactorsFor(remainder: number): Prime[] {
+    const counts = FactorizationEngine.factorize(remainder);
+    const factors = supportedPrimes.flatMap((prime) => Array.from({ length: counts[prime] ?? 0 }, () => prime));
+    return factors.every((factor) => this.primes.includes(factor)) ? factors : [];
+  }
+
+  private chainCoordinates(length: number): Array<{ row: number; col: number }> {
+    const coordinates: Array<{ row: number; col: number }> = [];
+    const row = this.random.integer(this.rows);
+    const startCol = length <= this.columns ? this.random.integer(this.columns - length + 1) : 0;
+
+    if (length <= this.columns) {
+      for (let index = 0; index < length; index += 1) {
+        coordinates.push({ row, col: startCol + index });
+      }
+      return coordinates;
+    }
+
+    for (let rowIndex = 0; rowIndex < this.rows && coordinates.length < length; rowIndex += 1) {
+      const leftToRight = rowIndex % 2 === 0;
+      for (let colIndex = 0; colIndex < this.columns && coordinates.length < length; colIndex += 1) {
+        coordinates.push({ row: rowIndex, col: leftToRight ? colIndex : this.columns - 1 - colIndex });
+      }
+    }
+    return coordinates;
   }
 
   private pickPrimeForCell(board: Board, row: number, col: number, remainder: number): Prime {
