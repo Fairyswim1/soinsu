@@ -1183,8 +1183,8 @@ export class GameScene extends BaseScene {
     this.session.endedAtMs = Date.now();
     const targetsComplete = this.session.completedFactorizations.length >= this.session.level.targets.length;
     const objectivesComplete = this.areObjectivesComplete();
-    this.session.cleared = targetsComplete && objectivesComplete;
-    if (this.session.cleared && !this.session.objectiveBonusAwarded && objectivesComplete) {
+    this.session.cleared = targetsComplete;
+    if (targetsComplete && objectivesComplete && !this.session.objectiveBonusAwarded) {
       const objectiveScore = ScoreSystem.scoreObjectiveBonus();
       this.applyScore(objectiveScore, false);
       this.session.objectiveBonusAwarded = true;
