@@ -1,4 +1,5 @@
 import {
+  PRIME_POP_AUDIO_ASSETS,
   PRIME_POP_BOARD_ASSETS,
   PRIME_POP_BATTLE_ASSETS,
   PRIME_POP_BUTTON_ASSETS,
@@ -20,6 +21,7 @@ export type AssetEntry = {
 };
 
 export const assetManifest: AssetEntry[] = [
+  ...Object.values(PRIME_POP_AUDIO_ASSETS).map(({ key, path }) => ({ key, path, type: "audio" as const })),
   ...Object.entries(PRIME_TILE_ASSETS).map(([prime, path]) => ({
     key: primeTileKey(Number(prime)),
     path,

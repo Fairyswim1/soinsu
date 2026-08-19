@@ -30,6 +30,11 @@ export const PRIME_POP_BUTTON_ASSETS = {
   quickPractice: { key: "number-break-button-quick-practice", path: "assets/number-break/buttons/quick_practice_button.png" },
   classroomMode: { key: "number-break-button-classroom-mode", path: "assets/number-break/buttons/fighter_mode_button.png?v=20260819-1215" },
   settings: { key: "number-break-button-settings", path: "assets/number-break/buttons/settings_button.png" },
+  musicOn: { key: "number-break-button-music-on-v20260819-1353", path: "assets/number-break/settings/btn_music_on.png?v=20260819-1353" },
+  musicOff: {
+    key: "number-break-button-music-off-v20260819-1353",
+    path: "assets/number-break/settings/btn_music_off.png?v=20260819-1353",
+  },
 };
 
 export const PRIME_POP_HUD_ASSETS = {
@@ -83,6 +88,13 @@ export const PRIME_POP_PRACTICE_ASSETS = {
   quickPracticeBackground: {
     key: "number-break-quick-practice-background",
     path: "assets/number-break/practice/practicequick_practice_background.png",
+  },
+};
+
+export const PRIME_POP_AUDIO_ASSETS = {
+  bgm: {
+    key: "number-break-bgm",
+    path: "assets/number-break/audio/019_seven_and_eight_7-8_combined.mp3",
   },
 };
 

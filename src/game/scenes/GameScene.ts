@@ -4,6 +4,7 @@ import {
   PRIME_POP_BOARD_ASSETS,
   PRIME_POP_BUTTON_ASSETS,
   PRIME_POP_EFFECT_ASSETS,
+  PRIME_POP_AUDIO_ASSETS,
   PRIME_POP_GAMEPLAY_ASSETS,
   PRIME_POP_WORLD_MAP_ASSETS,
   PRIME_TILE_ASSETS,
@@ -103,7 +104,7 @@ export class GameScene extends BaseScene {
   private displayedTarget?: number;
   private feedbackBanner?: Phaser.GameObjects.Container;
   private streakBadge?: Phaser.GameObjects.Container;
-  private musicButtonLabel?: Phaser.GameObjects.Text;
+  private classroomTurnBanner?: Phaser.GameObjects.Container;
 
   constructor() {
     super("GameScene");
@@ -129,12 +130,15 @@ export class GameScene extends BaseScene {
     this.audio.setMuted(save.muted);
     this.audio.setVolume(save.sfxVolume);
     this.audio.setMusicVolume(save.musicVolume);
-    this.audio.startMusic();
+    this.audio.startMusic(this, PRIME_POP_AUDIO_ASSETS.bgm.key);
 
     this.drawShell();
     this.drawBoard();
     this.drawBlockers();
     this.updateHud();
+    if (this.session.mode === "classroom") {
+      this.time.delayedCall(260, () => this.showClassroomTurnAnnouncement());
+    }
     this.bindKeyboard();
     this.startTimer();
     this.scale.on(Phaser.Scale.Events.RESIZE, this.cancelDrag, this);
@@ -191,10 +195,19 @@ export class GameScene extends BaseScene {
       })
       .setOrigin(0.5);
 
-    this.addImageButton(922, 50, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 92, 61);
-    this.addImageButton(1022, 50, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 92, 61);
-    this.addImageButton(1122, 50, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 92, 61);
-    this.addMusicToggleButton(1222, 50);
+    const topButtonY = 50;
+    const topButtonGap = 10;
+    const topButtonHeight = 60;
+    const topButtonWidth = 92;
+    const musicButtonWidth = 136;
+    const fullscreenButtonX = 900;
+    const hintButtonX = fullscreenButtonX + topButtonWidth + topButtonGap;
+    const pauseButtonX = hintButtonX + topButtonWidth + topButtonGap;
+    const musicButtonX = pauseButtonX + topButtonWidth / 2 + topButtonGap + musicButtonWidth / 2 - 18;
+    this.addImageButton(fullscreenButtonX, topButtonY, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), topButtonWidth, topButtonHeight);
+    this.addImageButton(hintButtonX, topButtonY, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), topButtonWidth, topButtonHeight);
+    this.addImageButton(pauseButtonX, topButtonY, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), topButtonWidth, topButtonHeight);
+    this.addMusicToggleButton(musicButtonX, topButtonY, musicButtonWidth);
 
     this.add
       .image(640, 135, this.getCroppedTexture(PRIME_POP_BOARD_ASSETS.targetPanel.key, GAMEPLAY_UI_CROPS.targetPanel))
@@ -398,54 +411,38 @@ export class GameScene extends BaseScene {
       .setResolution(2);
   }
 
-  private addMusicToggleButton(x: number, y: number): void {
-    const container = this.add.container(x, y).setDepth(80);
-    const bg = this.add.graphics();
-    const draw = (pressed = false): void => {
-      const muted = SaveManager.load().muted;
-      bg.clear();
-      bg.fillStyle(0x071035, 0.72);
-      bg.fillRoundedRect(-42, -26, 84, 54, 18);
-      bg.fillStyle(muted ? 0x483067 : 0x0869d8, 0.98);
-      bg.fillRoundedRect(-42, -30, 84, 54, 18);
-      bg.lineStyle(2, muted ? 0xb887ff : 0x75ecff, 0.68);
-      bg.strokeRoundedRect(-40, -28, 80, 50, 16);
-      bg.fillStyle(0xffffff, pressed ? 0.1 : 0.18);
-      bg.fillRoundedRect(-30, -22, 60, 16, 10);
-      this.musicButtonLabel?.setText(muted ? "음소거" : "음악");
-    };
-    this.musicButtonLabel = this.add
-      .text(0, -3, "", {
-        fontFamily: gameFontFamily,
-        fontSize: "17px",
-        color: "#ffffff",
-        fontStyle: "bold",
-        stroke: "#07123d",
-        strokeThickness: 4,
-      })
-      .setOrigin(0.5)
-      .setResolution(2);
-    container.add([bg, this.musicButtonLabel]);
-    draw();
-
-    const hitZone = this.add.zone(x, y, 92, 64).setDepth(81);
+  private addMusicToggleButton(x: number, y: number, displayWidth: number): void {
+    const image = this.add.image(x, y, this.musicToggleKey()).setDepth(80);
+    let scale = this.applyMusicToggleTexture(image, displayWidth);
+    const hitZone = this.add.zone(x, y, displayWidth + 10, 58).setDepth(81);
     hitZone.setInteractive({ useHandCursor: true });
-    hitZone.on("pointerover", () => this.tweens.add({ targets: container, scale: 1.03, duration: 110, ease: "Sine.easeOut" }));
+    hitZone.on("pointerover", () => this.tweens.add({ targets: image, scale: scale * 1.03, duration: 110, ease: "Sine.easeOut" }));
     hitZone.on("pointerout", () => {
-      this.tweens.add({ targets: container, scale: 1, duration: 110, ease: "Sine.easeOut" });
-      draw();
+      this.tweens.add({ targets: image, scale, duration: 110, ease: "Sine.easeOut" });
     });
     hitZone.on("pointerdown", () => {
-      draw(true);
-      this.tweens.add({ targets: container, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
+      this.tweens.add({ targets: image, scale: scale * 0.96, duration: 70, ease: "Sine.easeOut" });
     });
     hitZone.on("pointerup", () => {
       const next = SaveManager.update((data) => ({ ...data, muted: !data.muted }));
       this.audio.setMuted(next.muted);
-      if (!next.muted) this.audio.startMusic();
-      container.setScale(1);
-      draw();
+      if (!next.muted) this.audio.startMusic(this, PRIME_POP_AUDIO_ASSETS.bgm.key);
+      scale = this.applyMusicToggleTexture(image, displayWidth);
     });
+  }
+
+  private applyMusicToggleTexture(image: Phaser.GameObjects.Image, displayWidth: number): number {
+    const key = this.musicToggleKey();
+    image.setTexture(key);
+    image.setName(SaveManager.load().muted ? "음악 켜기" : "음악 끄기");
+    const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
+    const scale = displayWidth / source.width;
+    image.setScale(scale);
+    return scale;
+  }
+
+  private musicToggleKey(): string {
+    return SaveManager.load().muted ? PRIME_POP_BUTTON_ASSETS.musicOn.key : PRIME_POP_BUTTON_ASSETS.musicOff.key;
   }
 
   private pulseText(text: Phaser.GameObjects.Text): void {
@@ -918,6 +915,7 @@ export class GameScene extends BaseScene {
     if (this.session.mode !== "classroom" || !state) return;
     state.currentTeamIndex = (state.currentTeamIndex + 1) % state.teams.length;
     if (state.currentTeamIndex === 0) state.round += 1;
+    this.showClassroomTurnAnnouncement();
   }
 
   private breakCombo(): void {
@@ -1124,9 +1122,62 @@ export class GameScene extends BaseScene {
   private updateClassroomTurnText(): void {
     const state = this.session.classroomState;
     if (!this.classroomTurnText || this.session.mode !== "classroom" || !state) return;
-    this.classroomTurnText.setText(
-      `${state.teams[state.currentTeamIndex]} 차례   ${state.teams[0]} ${state.scores[0]} : ${state.teams[1]} ${state.scores[1]}`,
-    );
+    this.classroomTurnText.setText(`${state.teams[0]} ${state.scores[0]} : ${state.teams[1]} ${state.scores[1]}`);
+  }
+
+  private showClassroomTurnAnnouncement(): void {
+    const state = this.session.classroomState;
+    if (this.session.mode !== "classroom" || !state) return;
+    this.classroomTurnBanner?.destroy();
+    const team = state.teams[state.currentTeamIndex] ?? "A팀";
+    const isTeamA = state.currentTeamIndex === 0;
+    const container = this.add.container(640, 360).setDepth(120).setAlpha(0).setScale(0.78);
+    const panel = this.add.graphics();
+    panel.fillStyle(isTeamA ? 0x123a8f : 0x5b238d, 0.92);
+    panel.fillRoundedRect(-300, -96, 600, 192, 34);
+    panel.lineStyle(5, isTeamA ? 0xffe48a : 0x85f1ff, 0.96);
+    panel.strokeRoundedRect(-300, -96, 600, 192, 34);
+    panel.fillStyle(0xffffff, 0.14);
+    panel.fillRoundedRect(-260, -74, 520, 42, 22);
+    const roundText = this.add
+      .text(0, -44, `${state.round}라운드`, {
+        fontFamily: gameFontFamily,
+        fontSize: "30px",
+        color: "#fff4a8",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    const turnText = this.add
+      .text(0, 24, `${team} 차례!`, {
+        fontFamily: gameFontFamily,
+        fontSize: "62px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 10,
+        shadow: { offsetX: 0, offsetY: 0, color: isTeamA ? "#ffdc6c" : "#72eaff", blur: 12, fill: true },
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    container.add([panel, roundText, turnText]);
+    this.classroomTurnBanner = container;
+    this.tweens.add({ targets: container, alpha: 1, scale: 1, duration: 180, ease: "Back.easeOut" });
+    this.time.delayedCall(980, () => {
+      this.tweens.add({
+        targets: container,
+        alpha: 0,
+        scale: 0.92,
+        duration: 180,
+        ease: "Sine.easeIn",
+        onComplete: () => {
+          if (this.classroomTurnBanner === container) this.classroomTurnBanner = undefined;
+          container.destroy();
+        },
+      });
+    });
   }
 
   private showResultFeedback(key: string, message: string, retry = false): void {

@@ -13,11 +13,10 @@ export type SoundName =
 
 export class AudioManager {
   private context?: AudioContext;
+  private music?: Phaser.Sound.BaseSound;
   private muted = false;
   private sfxVolume = 0.65;
   private musicVolume = 0.35;
-  private musicTimer?: number;
-  private musicStep = 0;
   private musicRequested = false;
 
   setMuted(value: boolean): void {
@@ -35,6 +34,7 @@ export class AudioManager {
 
   setMusicVolume(value: number): void {
     this.musicVolume = Math.max(0, Math.min(1, value));
+    this.applyMusicVolume();
   }
 
   unlock(): void {
@@ -64,48 +64,35 @@ export class AudioManager {
     oscillator.stop(now + 0.18);
   }
 
-  startMusic(): void {
+  startMusic(scene?: Phaser.Scene, key?: string): void {
     this.musicRequested = true;
-    if (this.muted || this.musicTimer !== undefined) return;
-    this.unlock();
-    this.playMusicStep();
-    this.musicTimer = window.setInterval(() => this.playMusicStep(), 240);
+    if (scene && key && (!this.music || !this.music.isPlaying)) {
+      this.music?.destroy();
+      this.music = scene.sound.add(key, {
+        loop: true,
+        volume: this.muted ? 0 : this.musicVolume,
+      });
+    }
+    if (this.muted || !this.music || this.music.isPlaying) return;
+    this.music.play();
+    this.applyMusicVolume();
   }
 
   stopMusic(): void {
-    if (this.musicTimer !== undefined) {
-      window.clearInterval(this.musicTimer);
-      this.musicTimer = undefined;
+    if (this.music?.isPlaying) {
+      this.music.stop();
     }
   }
 
-  private playMusicStep(): void {
-    if (this.muted) return;
-    this.unlock();
-    if (!this.context) return;
-    const now = this.context.currentTime;
-    const melody = [523.25, 659.25, 783.99, 987.77, 880, 783.99, 659.25, 587.33];
-    const bass = [130.81, 130.81, 196, 196, 146.83, 146.83, 196, 196];
-    const index = this.musicStep % melody.length;
-    this.playTone(melody[index], now, 0.18, "triangle", 0.055 * this.musicVolume);
-    if (this.musicStep % 2 === 0) {
-      this.playTone(bass[index], now, 0.22, "sine", 0.04 * this.musicVolume);
+  private applyMusicVolume(): void {
+    const music = this.music as (Phaser.Sound.BaseSound & { setVolume?: (value: number) => void; volume?: number }) | undefined;
+    if (!music) return;
+    const volume = this.muted ? 0 : this.musicVolume;
+    if (music.setVolume) {
+      music.setVolume(volume);
+    } else {
+      music.volume = volume;
     }
-    this.musicStep += 1;
-  }
-
-  private playTone(frequency: number, startTime: number, duration: number, type: OscillatorType, volume: number): void {
-    if (!this.context || volume <= 0) return;
-    const oscillator = this.context.createOscillator();
-    const gain = this.context.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, startTime);
-    gain.gain.setValueAtTime(0.0001, startTime);
-    gain.gain.exponentialRampToValueAtTime(Math.max(0.0001, volume), startTime + 0.025);
-    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-    oscillator.connect(gain).connect(this.context.destination);
-    oscillator.start(startTime);
-    oscillator.stop(startTime + duration + 0.02);
   }
 
   private frequencyFor(name: SoundName): number {
