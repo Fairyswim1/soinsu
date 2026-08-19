@@ -16,6 +16,17 @@ describe("BoardGenerator and SelectionSystem", () => {
     expect(generator.hasFactorChain(board, 32)).toBe(true);
   });
 
+  it("keeps a full adjacent factor chain across common targets and seeds", () => {
+    const targets = [12, 15, 20, 32, 45, 72, 98, 126, 135];
+    for (const target of targets) {
+      for (let seed = 1; seed <= 20; seed += 1) {
+        const generator = new BoardGenerator({ availablePrimes: [2, 3, 5, 7], seed });
+        const board = generator.createBoard(target);
+        expect(generator.hasFactorChain(board, target), `target ${target}, seed ${seed}`).toBe(true);
+      }
+    }
+  });
+
   it("refills after removal while preserving a playable board", () => {
     const generator = new BoardGenerator({ availablePrimes: [2, 3, 5], seed: 7 });
     const board = generator.createBoard(45);

@@ -30,8 +30,15 @@ const DEFAULT_CLASSROOM_STATE: ClassroomState = {
   round: 1,
 };
 
+const createDefaultClassroomState = (): ClassroomState => ({
+  teams: [...DEFAULT_CLASSROOM_STATE.teams],
+  scores: [...DEFAULT_CLASSROOM_STATE.scores],
+  currentTeamIndex: DEFAULT_CLASSROOM_STATE.currentTeamIndex,
+  round: DEFAULT_CLASSROOM_STATE.round,
+});
+
 export class ClassroomScene extends BaseScene {
-  private state: ClassroomState = { ...DEFAULT_CLASSROOM_STATE, teams: [...DEFAULT_CLASSROOM_STATE.teams], scores: [...DEFAULT_CLASSROOM_STATE.scores] };
+  private state: ClassroomState = createDefaultClassroomState();
 
   constructor() {
     super("ClassroomScene");
@@ -46,13 +53,13 @@ export class ClassroomScene extends BaseScene {
     this.addRoundText({ x: 836, y: 780 }, background);
 
     this.addImageButton({ x: 465, y: 876, width: 338 }, background, PRIME_POP_BATTLE_ASSETS.stageSelect.key, () => this.selectStage());
-    this.addImageButton({ x: 836, y: 876, width: 338 }, background, PRIME_POP_BATTLE_ASSETS.resetScore.key, () => this.scene.start("ClassroomScene"));
+    this.addImageButton({ x: 836, y: 876, width: 338 }, background, PRIME_POP_BATTLE_ASSETS.resetScore.key, () => this.resetScore());
     this.addImageButton({ x: 1207, y: 876, width: 338 }, background, PRIME_POP_BATTLE_ASSETS.title.key, () => this.scene.start("MenuScene"));
   }
 
   private normalizeState(state?: ClassroomState): ClassroomState {
     if (!state) {
-      return { ...DEFAULT_CLASSROOM_STATE, teams: [...DEFAULT_CLASSROOM_STATE.teams], scores: [...DEFAULT_CLASSROOM_STATE.scores] };
+      return createDefaultClassroomState();
     }
     const teams = state.teams.length >= 2 ? state.teams.slice(0, 2) : [...DEFAULT_CLASSROOM_STATE.teams];
     const scores = teams.map((_, index) => Math.max(0, state.scores[index] ?? 0));
@@ -143,5 +150,9 @@ export class ClassroomScene extends BaseScene {
       mode: "classroom",
       classroomState: this.state,
     });
+  }
+
+  private resetScore(): void {
+    this.scene.restart({ classroomState: createDefaultClassroomState() });
   }
 }

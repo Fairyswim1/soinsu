@@ -85,18 +85,34 @@ export class BoardGenerator {
   hasFactorChain(board: Board, remainder: number): boolean {
     const factors = this.expandedFactorsFor(remainder);
     if (factors.length === 0) return false;
+    const totalFactors = factors.length;
+    const factorCounts = factors.reduce<Partial<Record<Prime, number>>>((counts, factor) => {
+      counts[factor] = (counts[factor] ?? 0) + 1;
+      return counts;
+    }, {});
 
-    const visit = (row: number, col: number, index: number, visited: Set<string>): boolean => {
+    const visit = (
+      row: number,
+      col: number,
+      currentRemainder: number,
+      remainingCounts: Partial<Record<Prime, number>>,
+      visited: Set<string>,
+      depth: number,
+    ): boolean => {
       const cell = board[row]?.[col] ?? null;
-      if (!cell || cell.prime !== factors[index]) return false;
-      if (index === factors.length - 1) return true;
+      if (!cell || visited.has(cell.id)) return false;
+      const remaining = remainingCounts[cell.prime] ?? 0;
+      if (remaining <= 0 || !FactorizationEngine.canDivide(currentRemainder, cell.prime)) return false;
+      if (depth === totalFactors) return true;
+      const nextCounts = { ...remainingCounts, [cell.prime]: remaining - 1 };
+      const nextRemainder = currentRemainder / cell.prime;
       visited.add(cell.id);
       for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
         for (let colOffset = -1; colOffset <= 1; colOffset += 1) {
           if (rowOffset === 0 && colOffset === 0) continue;
           const next = board[row + rowOffset]?.[col + colOffset] ?? null;
           if (!next || visited.has(next.id)) continue;
-          if (visit(row + rowOffset, col + colOffset, index + 1, new Set(visited))) return true;
+          if (visit(row + rowOffset, col + colOffset, nextRemainder, nextCounts, new Set(visited), depth + 1)) return true;
         }
       }
       return false;
@@ -104,7 +120,7 @@ export class BoardGenerator {
 
     for (let row = 0; row < this.rows; row += 1) {
       for (let col = 0; col < this.columns; col += 1) {
-        if (visit(row, col, 0, new Set())) return true;
+        if (visit(row, col, remainder, factorCounts, new Set(), 1)) return true;
       }
     }
     return false;
@@ -137,7 +153,8 @@ export class BoardGenerator {
     if (factors.length === 0 || factors.length > this.rows * this.columns || this.hasFactorChain(board, remainder)) return;
 
     const coordinates = this.chainCoordinates(factors.length);
-    factors.forEach((factor, index) => {
+    const shuffledFactors = this.shuffleFactors(factors);
+    shuffledFactors.forEach((factor, index) => {
       const coordinate = coordinates[index];
       if (!coordinate) return;
       board[coordinate.row]![coordinate.col] = this.createCandy(coordinate.row, coordinate.col, factor);
@@ -148,6 +165,15 @@ export class BoardGenerator {
     const counts = FactorizationEngine.factorize(remainder);
     const factors = supportedPrimes.flatMap((prime) => Array.from({ length: counts[prime] ?? 0 }, () => prime));
     return factors.every((factor) => this.primes.includes(factor)) ? factors : [];
+  }
+
+  private shuffleFactors(factors: readonly Prime[]): Prime[] {
+    const shuffled = [...factors];
+    for (let index = shuffled.length - 1; index > 0; index -= 1) {
+      const swapIndex = this.random.integer(index + 1);
+      [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex]!, shuffled[index]!];
+    }
+    return shuffled;
   }
 
   private chainCoordinates(length: number): Array<{ row: number; col: number }> {
