@@ -194,7 +194,16 @@ export class LevelSelectScene extends BaseScene {
       if (current) {
         const glow = this.add.image((start.x + end.x) / 2, (start.y + end.y) / 2, PRIME_POP_WORLD_MAP_ASSETS.checkpointGlow.key);
         glow.setDisplaySize(120, 120).setAlpha(0.34).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: glow, alpha: 0.12, scale: 1.08, duration: 850, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+        this.tweens.add({
+          targets: glow,
+          alpha: 0.12,
+          scaleX: glow.scaleX * 1.08,
+          scaleY: glow.scaleY * 1.08,
+          duration: 850,
+          yoyo: true,
+          repeat: -1,
+          ease: "Sine.easeInOut",
+        });
       }
     }
   }
@@ -329,7 +338,15 @@ export class LevelSelectScene extends BaseScene {
       const key = filled ? PRIME_POP_WORLD_MAP_ASSETS.filledStar.key : PRIME_POP_WORLD_MAP_ASSETS.emptyStar.key;
       const star = this.add.image(x + (index - 1) * gap, y, key).setDisplaySize(starSize, starSize).setAlpha(filled ? 0.96 : 0.52);
       if (filled && stars === 3) {
-        this.tweens.add({ targets: star, scale: 1.14, duration: 420, yoyo: true, delay: index * 90, ease: "Back.easeOut" });
+        this.tweens.add({
+          targets: star,
+          scaleX: star.scaleX * 1.14,
+          scaleY: star.scaleY * 1.14,
+          duration: 420,
+          yoyo: true,
+          delay: index * 90,
+          ease: "Back.easeOut",
+        });
       }
     }
   }

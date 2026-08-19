@@ -14,12 +14,13 @@ import type { Blocker } from "../models/BlockerModel";
 import type { Board, Candy, Prime, SpecialCandy } from "../models/CandyModel";
 import { createSession, type ClassroomState, type GameMode, type GameSession } from "../models/GameSession";
 import type { LevelConfig } from "../models/LevelModel";
-import { AudioManager } from "../systems/AudioManager";
+import { sharedAudioManager } from "../systems/AudioManager";
 import { BlockerSystem } from "../systems/BlockerSystem";
 import { BoardGenerator } from "../systems/BoardGenerator";
 import { FactorizationEngine } from "../systems/FactorizationEngine";
 import { HintSystem } from "../systems/HintSystem";
 import { LevelManager } from "../systems/LevelManager";
+import { SaveManager } from "../systems/SaveManager";
 import { ScoreSystem } from "../systems/ScoreSystem";
 import { SelectionSystem } from "../systems/SelectionSystem";
 import { SpecialCandySystem } from "../systems/SpecialCandySystem";
@@ -75,7 +76,7 @@ export class GameScene extends BaseScene {
   private selection!: SelectionSystem;
   private session!: GameSession;
   private blockers: Blocker[] = [];
-  private readonly audio = new AudioManager();
+  private readonly audio = sharedAudioManager;
   private readonly candyObjects = new Map<string, Phaser.GameObjects.Container>();
   private boardLayer!: Phaser.GameObjects.Container;
   private pathLayer!: Phaser.GameObjects.Graphics;
@@ -102,6 +103,7 @@ export class GameScene extends BaseScene {
   private displayedTarget?: number;
   private feedbackBanner?: Phaser.GameObjects.Container;
   private streakBadge?: Phaser.GameObjects.Container;
+  private musicButtonLabel?: Phaser.GameObjects.Text;
 
   constructor() {
     super("GameScene");
@@ -123,7 +125,11 @@ export class GameScene extends BaseScene {
     this.session.autoShuffleCount = this.generator.shuffleCount;
     this.selection = new SelectionSystem(this.board);
     this.blockers = BlockerSystem.createBlockers(level.obstacles);
-    this.audio.setMuted(false);
+    const save = SaveManager.load();
+    this.audio.setMuted(save.muted);
+    this.audio.setVolume(save.sfxVolume);
+    this.audio.setMusicVolume(save.musicVolume);
+    this.audio.startMusic();
 
     this.drawShell();
     this.drawBoard();
@@ -134,6 +140,7 @@ export class GameScene extends BaseScene {
     this.scale.on(Phaser.Scale.Events.RESIZE, this.cancelDrag, this);
     this.input.on(Phaser.Input.Events.GAME_OUT, this.cancelDrag, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.timerEvent?.remove(false));
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.audio.stopMusic());
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.scale.off(Phaser.Scale.Events.RESIZE, this.cancelDrag, this));
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.input.off(Phaser.Input.Events.GAME_OUT, this.cancelDrag, this));
   }
@@ -187,6 +194,7 @@ export class GameScene extends BaseScene {
     this.addImageButton(922, 50, PRIME_POP_BUTTON_ASSETS.fullscreen.key, () => requestFullscreen(), 92, 61);
     this.addImageButton(1022, 50, PRIME_POP_BUTTON_ASSETS.hint.key, () => this.useHint(), 92, 61);
     this.addImageButton(1122, 50, PRIME_POP_BUTTON_ASSETS.pause.key, () => this.pauseGame(), 92, 61);
+    this.addMusicToggleButton(1222, 50);
 
     this.add
       .image(640, 135, this.getCroppedTexture(PRIME_POP_BOARD_ASSETS.targetPanel.key, GAMEPLAY_UI_CROPS.targetPanel))
@@ -276,9 +284,9 @@ export class GameScene extends BaseScene {
     this.missionIcons = [];
     this.missionTexts = [];
     [
-      { x: 850, labelOffset: 24 },
+      { x: 862, labelOffset: 24 },
       { x: 1010, labelOffset: 14 },
-      { x: 1170, labelOffset: 4 },
+      { x: 1158, labelOffset: 4 },
     ].forEach(({ x: slotX, labelOffset }) => {
       const icon = this.add
         .text(slotX - 52, 836, "", {
@@ -388,6 +396,56 @@ export class GameScene extends BaseScene {
       })
       .setOrigin(0.5)
       .setResolution(2);
+  }
+
+  private addMusicToggleButton(x: number, y: number): void {
+    const container = this.add.container(x, y).setDepth(80);
+    const bg = this.add.graphics();
+    const draw = (pressed = false): void => {
+      const muted = SaveManager.load().muted;
+      bg.clear();
+      bg.fillStyle(0x071035, 0.72);
+      bg.fillRoundedRect(-42, -26, 84, 54, 18);
+      bg.fillStyle(muted ? 0x483067 : 0x0869d8, 0.98);
+      bg.fillRoundedRect(-42, -30, 84, 54, 18);
+      bg.lineStyle(2, muted ? 0xb887ff : 0x75ecff, 0.68);
+      bg.strokeRoundedRect(-40, -28, 80, 50, 16);
+      bg.fillStyle(0xffffff, pressed ? 0.1 : 0.18);
+      bg.fillRoundedRect(-30, -22, 60, 16, 10);
+      this.musicButtonLabel?.setText(muted ? "음소거" : "음악");
+    };
+    this.musicButtonLabel = this.add
+      .text(0, -3, "", {
+        fontFamily: gameFontFamily,
+        fontSize: "17px",
+        color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#07123d",
+        strokeThickness: 4,
+      })
+      .setOrigin(0.5)
+      .setResolution(2);
+    container.add([bg, this.musicButtonLabel]);
+    draw();
+
+    const hitZone = this.add.zone(x, y, 92, 64).setDepth(81);
+    hitZone.setInteractive({ useHandCursor: true });
+    hitZone.on("pointerover", () => this.tweens.add({ targets: container, scale: 1.03, duration: 110, ease: "Sine.easeOut" }));
+    hitZone.on("pointerout", () => {
+      this.tweens.add({ targets: container, scale: 1, duration: 110, ease: "Sine.easeOut" });
+      draw();
+    });
+    hitZone.on("pointerdown", () => {
+      draw(true);
+      this.tweens.add({ targets: container, scale: 0.96, duration: 70, ease: "Sine.easeOut" });
+    });
+    hitZone.on("pointerup", () => {
+      const next = SaveManager.update((data) => ({ ...data, muted: !data.muted }));
+      this.audio.setMuted(next.muted);
+      if (!next.muted) this.audio.startMusic();
+      container.setScale(1);
+      draw();
+    });
   }
 
   private pulseText(text: Phaser.GameObjects.Text): void {

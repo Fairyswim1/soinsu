@@ -2,6 +2,7 @@ import { gameConfig } from "../config/gameConfig";
 import { levels } from "../config/levels";
 import { PRIME_POP_SETTINGS_ASSETS } from "../config/primePopAssets";
 import { gameFontFamily } from "../config/theme";
+import { sharedAudioManager } from "../systems/AudioManager";
 import { SaveManager, type SaveData } from "../systems/SaveManager";
 import { BaseScene } from "./BaseScene";
 
@@ -41,6 +42,7 @@ export class SettingsScene extends BaseScene {
     this.addImageButton({ x: 604, y: 552, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.toggleMute.key, () => {
       const next = SaveManager.update((data) => ({ ...data, muted: !data.muted }));
       this.save = next;
+      sharedAudioManager.setMuted(next.muted);
       this.mutedText?.setText(this.statusLabel(next.muted));
     });
     this.addImageButton({ x: 1084, y: 552, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.toggleReduceMotion.key, () => {
@@ -56,11 +58,18 @@ export class SettingsScene extends BaseScene {
     this.addImageButton({ x: 1084, y: 682, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.resetSave.key, () => {
       SaveManager.update((data) => ({
         ...data,
+        tutorialComplete: false,
+        unlockedLevel: 1,
+        levelScores: {},
+        levelStars: {},
         muted: false,
         musicVolume: 0.35,
         sfxVolume: 0.7,
         reducedMotion: false,
       }));
+      sharedAudioManager.setMuted(false);
+      sharedAudioManager.setMusicVolume(0.35);
+      sharedAudioManager.setVolume(0.7);
       this.scene.restart();
     });
     this.addImageButton({ x: 836, y: 846, width: 420 }, background, PRIME_POP_SETTINGS_ASSETS.menu.key, () => {
