@@ -413,32 +413,49 @@ export class GameScene extends BaseScene {
 
   private addMusicToggleButton(x: number, y: number, displayWidth: number): void {
     const image = this.add.image(x, y, this.musicToggleKey()).setDepth(80);
-    let scale = this.applyMusicToggleTexture(image, displayWidth);
+    let baseScale = this.applyMusicToggleTexture(image, displayWidth);
     const hitZone = this.add.zone(x, y, displayWidth + 10, 58).setDepth(81);
     hitZone.setInteractive({ useHandCursor: true });
-    hitZone.on("pointerover", () => this.tweens.add({ targets: image, scale: scale * 1.03, duration: 110, ease: "Sine.easeOut" }));
+    hitZone.on("pointerover", () => {
+      this.tweens.killTweensOf(image);
+      this.tweens.add({
+        targets: image,
+        scaleX: baseScale.x * 1.03,
+        scaleY: baseScale.y * 1.03,
+        duration: 110,
+        ease: "Sine.easeOut",
+      });
+    });
     hitZone.on("pointerout", () => {
-      this.tweens.add({ targets: image, scale, duration: 110, ease: "Sine.easeOut" });
+      this.tweens.killTweensOf(image);
+      this.tweens.add({ targets: image, scaleX: baseScale.x, scaleY: baseScale.y, duration: 110, ease: "Sine.easeOut" });
     });
     hitZone.on("pointerdown", () => {
-      this.tweens.add({ targets: image, scale: scale * 0.96, duration: 70, ease: "Sine.easeOut" });
+      this.tweens.killTweensOf(image);
+      this.tweens.add({
+        targets: image,
+        scaleX: baseScale.x * 0.96,
+        scaleY: baseScale.y * 0.96,
+        duration: 70,
+        ease: "Sine.easeOut",
+      });
     });
     hitZone.on("pointerup", () => {
       const next = SaveManager.update((data) => ({ ...data, muted: !data.muted }));
       this.audio.setMuted(next.muted);
       if (!next.muted) this.audio.startMusic(this, PRIME_POP_AUDIO_ASSETS.bgm.key);
-      scale = this.applyMusicToggleTexture(image, displayWidth);
+      baseScale = this.applyMusicToggleTexture(image, displayWidth);
     });
   }
 
-  private applyMusicToggleTexture(image: Phaser.GameObjects.Image, displayWidth: number): number {
+  private applyMusicToggleTexture(image: Phaser.GameObjects.Image, displayWidth: number): { x: number; y: number } {
     const key = this.musicToggleKey();
+    this.tweens.killTweensOf(image);
     image.setTexture(key);
     image.setName(SaveManager.load().muted ? "음악 켜기" : "음악 끄기");
-    const source = this.textures.get(key).getSourceImage() as HTMLImageElement;
-    const scale = displayWidth / source.width;
-    image.setScale(scale);
-    return scale;
+    const displayHeight = displayWidth * (724 / 2172);
+    image.setDisplaySize(displayWidth, displayHeight);
+    return { x: image.scaleX, y: image.scaleY };
   }
 
   private musicToggleKey(): string {

@@ -454,10 +454,6 @@ export class LevelSelectScene extends BaseScene {
     hitZone.on("pointerout", () => setButtonScale(1, 150));
     hitZone.on("pointerdown", () => {
       setButtonScale(0.96, 70);
-      if (this.mode === "classroom") {
-        this.scene.start("ClassroomScene", { classroomState: this.classroomState });
-        return;
-      }
       this.scene.start("MenuScene");
     });
   }

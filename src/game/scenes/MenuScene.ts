@@ -22,7 +22,7 @@ export class MenuScene extends BaseScene {
       y: 636,
       key: PRIME_POP_BUTTON_ASSETS.start.key,
       alt: "게임 시작",
-      onClick: () => this.scene.start("LevelSelectScene"),
+      onClick: () => this.scene.start("LevelSelectScene", { mode: "campaign" }),
       width: 240,
       height: 93,
       glowColor: 0xffe36a,
