@@ -67,7 +67,7 @@ export const PRIME_POP_SETTINGS_ASSETS = {
     key: "number-break-settings-toggle-reduce-motion",
     path: "assets/number-break/settings/btn_toggle_reduce_motion.png",
   },
-  resetSave: { key: "number-break-settings-reset-save", path: "assets/number-break/settings/btn_reset_save.png" },
+  resetSave: { key: "number-break-settings-reset-save", path: "assets/number-break/settings/btn_reset_save.png?v=20260819-1325" },
   unlockAll: { key: "number-break-settings-unlock-all", path: "assets/number-break/settings/btn_unlock_all.png?v=20260819-1205" },
   menu: { key: "number-break-settings-menu", path: "assets/number-break/settings/btn_menu.png" },
 };

@@ -49,13 +49,19 @@ export class SettingsScene extends BaseScene {
       this.reducedMotion = next.reducedMotion;
       this.motionText?.setText(this.statusLabel(next.reducedMotion));
     });
-    this.addImageButton({ x: 604, y: 682, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.resetSave.key, () => {
-      SaveManager.reset();
-      this.scene.restart();
-    });
-    this.addImageButton({ x: 1084, y: 682, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.unlockAll.key, () => {
+    this.addImageButton({ x: 604, y: 682, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.unlockAll.key, () => {
       SaveManager.update((data) => ({ ...data, unlockedLevel: levels.length }));
       this.scene.start("LevelSelectScene");
+    });
+    this.addImageButton({ x: 1084, y: 682, width: 430 }, background, PRIME_POP_SETTINGS_ASSETS.resetSave.key, () => {
+      SaveManager.update((data) => ({
+        ...data,
+        muted: false,
+        musicVolume: 0.35,
+        sfxVolume: 0.7,
+        reducedMotion: false,
+      }));
+      this.scene.restart();
     });
     this.addImageButton({ x: 836, y: 846, width: 420 }, background, PRIME_POP_SETTINGS_ASSETS.menu.key, () => {
       this.scene.start("MenuScene");
