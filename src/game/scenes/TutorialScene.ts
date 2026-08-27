@@ -24,8 +24,41 @@ export class TutorialScene extends BaseScene {
     const top = gameConfig.height / 2 - displayHeight / 2;
 
     image.setDisplaySize(displayWidth, displayHeight);
+    this.addInstructionTextOverlay(left, top, scale);
     this.addHotspot({ x: 624, y: 828, width: 368, height: 112 }, left, top, scale, () => this.scene.start("LevelSelectScene"));
     this.addHotspot({ x: 1058, y: 828, width: 368, height: 112 }, left, top, scale, () => this.scene.start("MenuScene"));
+  }
+
+  private addInstructionTextOverlay(imageLeft: number, imageTop: number, imageScale: number): void {
+    const instructions = [
+      "목표 숫자를 소인수로 나눌 순서를 찾는다",
+      "기본은 소수 보석을 탭해서 하나씩 선택한다",
+      "끊지 않고 이어 드래그하면 콤보로 연결된다",
+      "예: 32는 2를 다섯 번 선택한다",
+      "한 번에 완성하거나 길게 연결하면 보너스 점수",
+    ];
+    const rowY = [324, 454, 584, 714, 844];
+
+    instructions.forEach((line, index) => {
+      const y = imageTop + rowY[index]! * imageScale;
+      const panel = this.add.graphics().setDepth(5);
+      panel.fillStyle(0x050b2b, 0.88);
+      panel.fillRoundedRect(imageLeft + 300 * imageScale, y - 48 * imageScale, 1190 * imageScale, 96 * imageScale, 20 * imageScale);
+      panel.lineStyle(1.5 * imageScale, 0x7ff3ff, 0.18);
+      panel.strokeRoundedRect(imageLeft + 300 * imageScale, y - 48 * imageScale, 1190 * imageScale, 96 * imageScale, 20 * imageScale);
+
+      this.add
+        .text(imageLeft + 328 * imageScale, y, line, {
+          fontFamily: "Arial, sans-serif",
+          fontSize: `${Math.round(48 * imageScale)}px`,
+          color: "#fff8d8",
+          fontStyle: "bold",
+          stroke: "#080b20",
+          strokeThickness: Math.max(4, Math.round(7 * imageScale)),
+        })
+        .setOrigin(0, 0.5)
+        .setDepth(6);
+    });
   }
 
   private addHotspot(
