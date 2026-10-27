@@ -1,0 +1,8 @@
+Reference: Number Trail (forest) and Number Break (soinsu), user-owned games.
+Jua: https://github.com/google/fonts/tree/main/ofl/jua
+Do Hyeon: https://github.com/google/fonts/tree/main/ofl/dohyeon
+Gowun Dodum: https://github.com/google/fonts/tree/main/ofl/gowundodum
+Downloaded 2026-10-27 from the Google Fonts repository.
+Original complete TTF fonts converted losslessly to WOFF2 with fontTools.
+No glyph subsetting or design changes. SIL Open Font License 1.1 files included.
+Titles: Jua 400. Controls and numerals: Do Hyeon 400. Prose: Gowun Dodum 400.

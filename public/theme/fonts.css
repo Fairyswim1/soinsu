@@ -1,0 +1,6 @@
+/* Same font roles as Number Trail / Number Break. SIL OFL licenses in fonts/. */
+@font-face{font-family:'Jua';src:url('./fonts/Jua-Regular.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'Do Hyeon';src:url('./fonts/DoHyeon-Regular.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+@font-face{font-family:'Gowun Dodum';src:url('./fonts/GowunDodum-Regular.woff2') format('woff2');font-style:normal;font-weight:400;font-display:swap}
+:root{--font-game-title:'Jua','Malgun Gothic',sans-serif;--font-game-display:'Do Hyeon','Malgun Gothic',sans-serif;--font-game-body:'Gowun Dodum','Malgun Gothic',sans-serif;--font-game-ui:'Noto Sans KR','Gowun Dodum','Malgun Gothic',sans-serif}
+#learning-entry{font-family:var(--font-game-display)!important;font-weight:400!important;font-size:16px!important;letter-spacing:0!important;border:2px solid #b49768!important;box-shadow:0 3px 0 #745c3840,0 5px 16px #0002!important;background:#fff8e8!important;color:#4a3d29!important}

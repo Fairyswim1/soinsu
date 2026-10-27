@@ -1,0 +1,8 @@
+/* The learning notebook uses the same voice as the Number games. */
+body{font-family:var(--font-game-body);line-height:1.8;color:#3d4134;background:#f6f1e5}
+h1,h2,h3{font-family:var(--font-game-title);font-weight:400;letter-spacing:0;line-height:1.4}
+h1{font-size:clamp(30px,4vw,43px)}h2{font-size:25px}h3{font-size:23px}
+button,summary,.eyebrow,.code,.badge,label,.mission-head,#download-record{font-family:var(--font-game-display);font-weight:400;letter-spacing:0}
+button{font-size:18px;border-radius:12px;border-color:#d7c7a9;box-shadow:0 2px 0 #d7c7a955}.primary{box-shadow:0 3px 0 #1e423a44,inset 0 1px 0 #fff3}.eyebrow{font-size:16px}.badge{font-size:16px;border-radius:9px}.standard-card .code{font-family:var(--font-game-display);font-weight:400;font-size:16px;letter-spacing:0}
+.standard-card,#mission,#report{background:#fffdf5;border:2px solid #e3d6bc;border-radius:20px;box-shadow:0 5px 0 #d6c59c28}.standard-card p{font-size:15px}.small,small{font-size:14px}.skill-row{font-size:15px}.skill-row span:last-child{font-family:var(--font-game-display);font-size:17px}.chart text,input,select{font-family:var(--font-game-display);font-weight:400}.chart text{font-size:14px}input,select{font-size:20px}textarea{font-family:var(--font-game-body);font-size:16px;line-height:1.8;background:#fffef9}.mission-head{font-size:15px}label{font-size:18px}.rubric{background:#f2efdd}.review-status,footer{font-size:14px}header span{font-family:var(--font-game-display);font-size:13px;letter-spacing:.5px}
+@media(max-width:550px){h1{font-size:31px}h2{font-size:23px}h3{font-size:22px}.standard-card,#mission,#report{padding:17px}.badge{font-size:15px}.mission-head{font-size:14px}.skill-row span:last-child{white-space:normal}.plot-cell{box-shadow:none}}
