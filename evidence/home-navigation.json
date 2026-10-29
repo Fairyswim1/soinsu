@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-29T05:59:28.652Z",
+  "status": "passed",
+  "destination": "https://math-game-arcade.vercel.app/",
+  "sameTabClickVerified": true,
+  "mobileWidth": 390,
+  "mobileLinkWithinViewport": true,
+  "screenshot": "evidence/home-mobile.png",
+  "scope": "Home navigation only; game and assessment logic unchanged"
+}
