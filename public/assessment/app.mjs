@@ -4,7 +4,7 @@ const empty=()=>({schema:1,version:VERSION,game,learnerSession:crypto.randomUUID
 let data;try{const raw=JSON.parse(localStorage.getItem(key));data=raw?.version===VERSION&&Array.isArray(raw.attempts)&&Array.isArray(raw.hints)&&raw.reviews&&raw.rounds?raw:empty();}catch{data=empty();}
 data.hintEvents ??= [];
 let active=null,queue=[],index=0,selected={},submitted=false;
-function save(){try{localStorage.setItem(key,JSON.stringify(data));}catch{$('#storage-warning').hidden=false;$('#storage-warning').textContent='이 브라우저에 저장하지 못했어요. 페이지를 닫기 전에 학습 기록을 파일로 저장해 주세요.';}}
+function save(){try{localStorage.setItem(key,JSON.stringify(data));}catch{$('#storage-warning').hidden=false;$('#storage-warning').textContent='이 브라우저에 진행을 저장하지 못했어요. 저장 공간이나 브라우저 설정을 확인해 주세요.';}}
 function node(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function button(text,fn){const b=node('button',text);b.type='button';b.onclick=fn;return b;}
 document.documentElement.style.setProperty('--accent',profile.color);document.title=`${profile.title} · 성취기준 확인`;$('#title').textContent=profile.title+' · 학습 확인';$('#context').textContent=profile.context;
@@ -53,9 +53,8 @@ function showReport(){
   const note=node('textarea');note.setAttribute('aria-label',r.code+' 교사 피드백');note.placeholder='판단 근거와 다음 학습 피드백';note.value=review.note||'';note.maxLength=4000;const msg=node('p',review.at?'마지막 검토: '+new Date(review.at).toLocaleString():'','review-status');
   d.append(verdict,note,button('교사 검토 저장',()=>{if(verdict.value!=='pending'&&(!note.value.trim()||!response.value.trim())){msg.textContent='학생 설명과 교사 판단 근거를 모두 남겨 주세요.';return;}data.reviews[r.code]={response:response.value,verdict:verdict.value,note:note.value,at:new Date().toISOString(),evidenceCount:data.attempts.filter(a=>a.code===r.code).length};save();showReport();selection();}),msg);card.append(d);target.append(card);
  }
- const log=$('#attempts');log.replaceChildren();if(!data.attempts.length)log.append(node('p','아직 제출한 과제가 없어요.'));for(const a of data.attempts){const item=node('div',undefined,'attempt');item.append(node('strong',`${a.code} · ${a.correct?'해결':'다시 확인'} · ${a.independent?'독립 첫 제출':a.hinted?'도움 사용':'재시도 또는 오답'}`),node('p',a.prompt),node('p','제출: '+JSON.stringify(a.response)),node('small',new Date(a.at).toLocaleString()+` · ${a.attempt}번째 제출`));log.append(item);}$('#report-title').focus();
+ const log=$('#attempts');log.replaceChildren();if(!data.attempts.length)log.append(node('p','아직 제출한 과제가 없어요.'));for(const a of data.attempts){const item=node('div',undefined,'attempt');item.append(node('strong',`${a.code} · ${a.correct?'해결':'다시 확인'} · ${a.independent?'독립 첫 제출':a.hinted?'도움 사용':'재시도 또는 오답'}`),node('p',a.prompt),node('p','내 답: '+Object.values(a.response||{}).map(v=>Array.isArray(v)?v.join(' · '):String(v)).join(' / ')),node('small',new Date(a.at).toLocaleString()+` · ${a.attempt}번째 제출`));log.append(item);}$('#report-title').focus();
 }
-let exportUrl=null;
-$('#records').onclick=showReport;$('#print').onclick=()=>window.print();$('#export').onclick=()=>{const out={...data,source,summary:report(game,data.attempts,data.reviews),rule:'각 요소 서로 다른 2개 과제에서 무도움 첫 제출 성공. 공식 이수 판정 아님.'},json=JSON.stringify(out,null,2);if(exportUrl)URL.revokeObjectURL(exportUrl);exportUrl=URL.createObjectURL(new Blob([json],{type:'application/json'}));$('#export-text').value=json;$('#download-record').href=exportUrl;$('#download-record').download=game+'-학습기록-'+new Date().toISOString().slice(0,10)+'.json';$('#export-preview').hidden=false;$('#download-record').focus();};
-$('#fresh').onclick=()=>{if(!confirm('현재 기록을 먼저 파일로 저장했나요? 이 기기의 현재 학습 기록을 비우고 새 학습자를 시작합니다.'))return;data=empty();if(exportUrl)URL.revokeObjectURL(exportUrl);exportUrl=null;$('#export-preview').hidden=true;$('#export-text').value='';$('#download-record').removeAttribute('href');save();selection();showReport();};
+$('#records').onclick=showReport;$('#print').onclick=()=>window.print();
+$('#fresh').onclick=()=>{if(!confirm('이 기기의 현재 학습 기록을 비우고 새 학습자를 시작할까요?'))return;data=empty();save();selection();showReport();};
 selection();save();
