@@ -1,3 +1,4 @@
+import { markTutorialSeen } from '../systems/TutorialState';
 import { gameConfig } from "../config/gameConfig";
 import { PRIME_POP_SCREEN_ASSETS } from "../config/primePopAssets";
 import { BaseScene } from "./BaseScene";
@@ -24,8 +25,21 @@ export class TutorialScene extends BaseScene {
     const top = gameConfig.height / 2 - displayHeight / 2;
 
     image.setDisplaySize(displayWidth, displayHeight);
-    this.addHotspot({ x: 624, y: 828, width: 368, height: 112 }, left, top, scale, () => this.scene.start("LevelSelectScene"));
-    this.addHotspot({ x: 1058, y: 828, width: 368, height: 112 }, left, top, scale, () => this.scene.start("MenuScene"));
+    const start = () => this.leaveTutorial('LevelSelectScene');
+    const skip = () => this.leaveTutorial('MenuScene');
+    this.input.keyboard?.on('keydown-ENTER', start);
+    this.input.keyboard?.on('keydown-ESC', skip);
+    this.events.once('shutdown', () => {
+      this.input.keyboard?.off('keydown-ENTER', start);
+      this.input.keyboard?.off('keydown-ESC', skip);
+    });
+    this.addHotspot({ x: 624, y: 828, width: 368, height: 112 }, left, top, scale, () => this.leaveTutorial("LevelSelectScene"));
+    this.addHotspot({ x: 1058, y: 828, width: 368, height: 112 }, left, top, scale, () => this.leaveTutorial("MenuScene"));
+  }
+
+  private leaveTutorial(next: string): void {
+    markTutorialSeen();
+    this.scene.start(next);
   }
 
   private addHotspot(

@@ -1,0 +1,69 @@
+
+> number-break@0.1.0 test
+> vitest run && node --test public/assessment/assessment.check.mjs
+
+
+ RUN  v3.2.7 D:/coding/게임생성/math-game-factory/existing/soinsu
+
+ ✓ src/tests/TutorialState.test.ts (3 tests) 93ms
+ ✓ src/tests/BlockerSystem.test.ts (2 tests) 7ms
+ ✓ src/tests/FactorizationEngine.test.ts (7 tests) 9ms
+ ✓ src/tests/LevelManager.test.ts (1 test) 19ms
+ ✓ src/tests/BoardGenerator.test.ts (6 tests) 117ms
+ ✓ src/tests/ScoreSystem.test.ts (6 tests) 11ms
+
+ Test Files  6 passed (6)
+      Tests  25 passed (25)
+   Start at  13:41:24
+   Duration  2.08s (transform 932ms, setup 0ms, collect 1.59s, tests 255ms, environment 1ms, prepare 5.22s)
+
+TAP version 13
+# Subtest: every advertised skill has three varied tasks per form; source pages are present
+ok 1 - every advertised skill has three varied tasks per form; source pages are present
+  ---
+  duration_ms: 5.7976
+  ...
+# Subtest: factor parsing rejects composites, one, malformed powers, code and unbounded powers
+ok 2 - factor parsing rejects composites, one, malformed powers, code and unbounded powers
+  ---
+  duration_ms: 0.9273
+  ...
+# Subtest: GCD and LCM result and factorization process are both required, including coprime pairs
+ok 3 - GCD and LCM result and factorization process are both required, including coprime pairs
+  ---
+  duration_ms: 1.3659
+  ...
+# Subtest: incorrect, assisted, and retry successes cannot produce independent credit
+ok 4 - incorrect, assisted, and retry successes cannot produce independent credit
+  ---
+  duration_ms: 3.0259
+  ...
+# Subtest: new form supports remediation; exhausted forms do not mint fresh item ids
+ok 5 - new form supports remediation; exhausted forms do not mint fresh item ids
+  ---
+  duration_ms: 0.3635
+  ...
+# Subtest: independent evidence does not automatically grade explanations or formal completion
+ok 6 - independent evidence does not automatically grade explanations or formal completion
+  ---
+  duration_ms: 1.9899
+  ...
+# Subtest: plots reject swapped coordinates, missing points and extra points; blank is not zero
+ok 7 - plots reject swapped coordinates, missing points and extra points; blank is not zero
+  ---
+  duration_ms: 1.1828
+  ...
+# Subtest: comparison keys agree with independent arithmetic, including negative square roots
+ok 8 - comparison keys agree with independent arithmetic, including negative square roots
+  ---
+  duration_ms: 0.8995
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 157.1145

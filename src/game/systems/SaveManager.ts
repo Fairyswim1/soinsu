@@ -40,7 +40,7 @@ export class SaveManager {
   }
 
   static save(data: SaveData): void {
-    localStorage.setItem(gameConfig.saveKey, JSON.stringify(data));
+    try { localStorage.setItem(gameConfig.saveKey, JSON.stringify(data)); } catch { /* Storage restrictions must not prevent opening the menu. */ }
   }
 
   static update(mutator: (data: SaveData) => SaveData): SaveData {

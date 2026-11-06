@@ -1,3 +1,4 @@
+import { initialScene } from '../systems/TutorialState';
 import { assetManifest } from "../config/assetManifest";
 import { primeThemes } from "../config/theme";
 import { supportedPrimes } from "../models/CandyModel";
@@ -20,7 +21,7 @@ export class PreloadScene extends BaseScene {
 
   create(): void {
     this.createFallbackTextures();
-    this.scene.start("MenuScene");
+    this.scene.start(initialScene());
   }
 
   private createFallbackTextures(): void {

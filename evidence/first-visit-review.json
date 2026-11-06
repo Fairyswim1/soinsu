@@ -1,0 +1,18 @@
+{
+  "checkedAt": "2026-11-06T04:52:15.156Z",
+  "scope": "Original tutorial auto-entry; existing gameplay and artwork retained",
+  "firstVisitOldOffUrl": true,
+  "firstVisitShowsExistingTutorial": true,
+  "completionPersistsAfterReload": true,
+  "unitTests": true,
+  "productionBuild": true,
+  "mobileLandscape": {
+    "width": 844,
+    "height": 390
+  },
+  "portraitUsesExistingRotateHint": true,
+  "keyboard": "Handlers added; scene entry/exit tested, native keyboard replay not reliably verified in IAB",
+  "screenshots": [
+    "evidence/first-visit-landscape.png"
+  ]
+}
